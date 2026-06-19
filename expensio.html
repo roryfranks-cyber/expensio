@@ -8,6 +8,8 @@
 <meta name="apple-mobile-web-app-title" content="Expensio">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#04111F">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.png">
 <title>Expensio — Henderson Rowe</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
@@ -35,14 +37,15 @@
     font-family: 'DM Sans', sans-serif;
     background: var(--bg);
     color: var(--text);
-    height: 100vh;
-    overflow: hidden;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
   }
 
-  #app { display: flex; flex-direction: column; height: 100vh; }
-  #main { display: flex; flex: 1; }
+  html, body { overflow-x: hidden; width: 100%; }
+  /* ── Layout ── */
+  #app { display: flex; flex-direction: column; min-height: 100vh; width: 100%; overflow-x: hidden; }
+  #main { display: flex; flex: 1; min-width: 0; width: 100%; }
   #sidebar {
     width: 240px; min-height: 100vh;
     background: var(--bg2);
@@ -51,44 +54,82 @@
     position: fixed; top: 0; left: 0; bottom: 0;
     z-index: 100;
   }
-  #content { margin-left: 240px; flex: 1; padding: 32px; max-width: 1200px; overflow-y: auto; }
+  #content { margin-left: 240px; flex: 1; min-width: 0; padding: 32px; max-width: 1200px; }
 
-  .sidebar-logo { padding: 24px 20px 16px; border-bottom: 1px solid var(--border); }
+  #mobile-topbar { display: none; }
+  #main-app { width: 100%; }
+  /* ── Header ── */
+  .sidebar-logo {
+    padding: 24px 20px 16px;
+    border-bottom: 1px solid var(--border);
+  }
   .sidebar-logo h1 { font-size: 20px; font-weight: 700; color: var(--teal); letter-spacing: -0.3px; }
   .sidebar-logo p { font-size: 11px; color: var(--text3); margin-top: 2px; }
 
-  .sidebar-user { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
-  .avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+  .sidebar-user {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; flex-shrink: 0;
+  }
   .sidebar-user-info { flex: 1; min-width: 0; }
   .sidebar-user-info .name { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .sidebar-user-info .role { font-size: 11px; color: var(--text3); }
 
+  /* ── Nav ── */
   nav { padding: 12px 0; flex: 1; }
   .nav-section { padding: 0 12px; margin-bottom: 4px; }
   .nav-label { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; padding: 8px 8px 4px; }
-  .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text2); transition: all 0.15s; border: none; background: none; width: 100%; text-align: left; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 10px; border-radius: 8px; cursor: pointer;
+    font-size: 13px; font-weight: 500; color: var(--text2);
+    transition: all 0.15s; border: none; background: none; width: 100%; text-align: left;
+  }
   .nav-item:hover { background: var(--bg3); color: var(--text); }
   .nav-item.active { background: var(--teal-dim); color: var(--teal); }
   .nav-item .icon { font-size: 15px; width: 20px; text-align: center; }
   .nav-badge { margin-left: auto; background: var(--amber); color: #000; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px; }
 
-  .card { background: var(--bg3); border: 1px solid var(--border); border-radius: 14px; padding: 20px; box-shadow: var(--card-shadow); }
+  .sidebar-footer { padding: 16px 20px; border-top: 1px solid var(--border); }
+  .signout-btn { font-size: 12px; color: var(--text3); cursor: pointer; background: none; border: none; font-family: inherit; }
+  .signout-btn:hover { color: var(--red); }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 14px; padding: 20px;
+    box-shadow: var(--card-shadow);
+    min-width: 0; width: 100%; box-sizing: border-box;
+  }
   .card + .card { margin-top: 12px; }
 
-  .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
-  .stat-card { background: var(--bg3); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; }
+  /* ── Stats ── */
+  .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; width: 100%; }
+  .stat-card { background: var(--bg3); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; min-width: 0; overflow: hidden; }
   .stat-val { font-size: 28px; font-weight: 700; color: var(--text); }
   .stat-lbl { font-size: 11px; color: var(--text3); margin-top: 4px; }
 
+  /* ── Page header ── */
   .page-header { margin-bottom: 24px; }
   .page-header h2 { font-size: 24px; font-weight: 700; }
   .page-header p { font-size: 13px; color: var(--text3); margin-top: 4px; }
 
+  /* ── Filters ── */
   .filters { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
-  .filter-btn { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; border: 1px solid var(--border); background: var(--bg3); color: var(--text2); cursor: pointer; transition: all 0.15s; font-family: inherit; }
+  .filter-btn {
+    padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 500;
+    border: 1px solid var(--border); background: var(--bg3); color: var(--text2);
+    cursor: pointer; transition: all 0.15s; font-family: inherit;
+  }
   .filter-btn:hover { border-color: var(--teal); color: var(--teal); }
   .filter-btn.active { background: var(--teal); border-color: var(--teal); color: var(--bg); }
 
+  /* ── Status pills ── */
   .pill { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
   .pill-pending { background: #1E1A08; color: var(--amber); }
   .pill-approved { background: #0A2E20; color: var(--green); }
@@ -96,99 +137,196 @@
   .pill-preauth { background: #1E1A08; color: var(--amber); }
   .pill-converted { background: #0A1E38; color: var(--text2); }
 
-  .expense-card { background: var(--bg3); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 10px; }
-  .expense-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
-  .expense-title { font-size: 15px; font-weight: 600; }
-  .expense-amount { font-size: 18px; font-weight: 700; }
+  /* ── Expense card ── */
+  .expense-card { background: var(--bg3); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 10px; min-width: 0; width: 100%; box-sizing: border-box; overflow: hidden; }
+  .expense-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; gap: 10px; }
+  .expense-title { font-size: 15px; font-weight: 600; min-width: 0; word-break: break-word; }
+  .expense-amount { font-size: 18px; font-weight: 700; flex-shrink: 0; white-space: nowrap; }
   .expense-meta { font-size: 12px; color: var(--text3); margin-bottom: 6px; }
   .expense-detail { font-size: 12px; color: var(--text2); margin-top: 3px; }
-  .expense-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border2); }
+  .expense-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border2); gap: 10px; flex-wrap: wrap; }
 
+  /* ── Forms ── */
   .form-group { margin-bottom: 16px; }
   label { display: block; font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 6px; }
-  input, select, textarea { width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg2); color: var(--text); font-family: inherit; font-size: 14px; transition: border-color 0.15s; outline: none; }
+  input, select, textarea {
+    width: 100%; padding: 10px 14px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--bg2);
+    color: var(--text); font-family: inherit; font-size: 14px;
+    transition: border-color 0.15s; outline: none;
+  }
   input:focus, select:focus, textarea:focus { border-color: var(--teal); }
   select option { background: var(--bg2); }
   textarea { resize: vertical; min-height: 80px; }
-  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
 
-  .btn { padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 600; border: none; cursor: pointer; font-family: inherit; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px; }
+  /* ── Buttons ── */
+  .btn {
+    padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 600;
+    border: none; cursor: pointer; font-family: inherit; transition: all 0.15s;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
   .btn-primary { background: var(--teal); color: var(--bg); }
   .btn-primary:hover { opacity: 0.9; }
   .btn-danger { background: rgba(248,113,113,0.15); color: var(--red); border: 1px solid var(--red); }
   .btn-success { background: rgba(0,200,150,0.15); color: var(--green); border: 1px solid var(--green); }
   .btn-ghost { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
+  .btn-amber { background: var(--amber); color: #000; }
   .btn-sm { padding: 6px 12px; font-size: 12px; }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  #login-screen { flex: 1; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  /* ── Login ── */
+  #login-screen {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    padding: 40px;
+  }
   .login-box { width: 100%; max-width: 420px; }
   .login-logo { text-align: center; margin-bottom: 40px; }
   .login-logo h1 { font-size: 32px; font-weight: 700; color: var(--teal); }
   .login-logo p { font-size: 14px; color: var(--text3); margin-top: 6px; }
 
-  .receipt-thumb { width: 80px; height: 80px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border); cursor: pointer; }
-  .receipt-thumbs { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  /* ── Tables ── */
+  table { width: 100%; border-collapse: collapse; }
+  th { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+  td { padding: 12px; font-size: 13px; border-bottom: 1px solid var(--border2); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
 
-  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 500; padding: 20px; }
-  .modal-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 24px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; }
+  /* ── OPS Mode bar ── */
+  .ops-mode-bar {
+    display: flex; gap: 8px; margin-bottom: 24px;
+    background: var(--bg2); padding: 6px; border-radius: 12px; border: 1px solid var(--border);
+    width: fit-content; max-width: 100%;
+  }
+  .ops-mode-btn {
+    padding: 8px 20px; border-radius: 8px; font-size: 13px; font-weight: 600;
+    border: none; cursor: pointer; font-family: inherit; transition: all 0.15s; color: var(--text2);
+    background: transparent;
+  }
+  .ops-mode-btn.active { background: var(--teal); color: var(--bg); }
 
-  /* Mobile */
+  /* ── Notification ── */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: #065F46; border-radius: 12px; padding: 14px 20px;
+    display: flex; align-items: center; gap: 10px; z-index: 999;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5); min-width: 300px;
+    animation: slideUp 0.3s ease;
+  }
+  @keyframes slideUp { from { transform: translateX(-50%) translateY(20px); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }
+  .toast-text { font-size: 14px; font-weight: 600; }
+
+  /* ── Empty state ── */
+  .empty { text-align: center; padding: 60px 40px; color: var(--text3); }
+  .empty .emoji { font-size: 40px; margin-bottom: 12px; }
+  .empty p { font-size: 15px; }
+
+  /* ── Loading ── */
+  .loading { text-align: center; padding: 40px; color: var(--text3); font-size: 14px; }
+
+  /* ── Note box ── */
+  .note-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-top: 10px; font-size: 12px; color: var(--text2); }
+
+  /* ── Mobile ── */
   @media (max-width: 768px) {
     html { -webkit-text-size-adjust: 100%; }
     body { -webkit-tap-highlight-color: transparent; }
     #sidebar { display: none; }
-    #content { margin-left: 0; padding: 12px 14px 100px; max-width: 100%; flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-    #main { flex-direction: column; height: 100%; }
+    #content { margin-left: 0; padding: 12px 14px 100px; max-width: 100%; }
+    #main { flex-direction: column; }
+    #main-app { flex-direction: column !important; }
 
-    #mobile-topbar { display: flex !important; padding: 14px 16px; background: var(--bg2); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 150; flex-shrink: 0; }
+    /* Top bar for mobile (replaces sidebar header info) */
+    #mobile-topbar {
+      display: flex !important;
+      align-items: center; justify-content: space-between; gap: 10px;
+      padding: 14px 16px; background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 150;
+      width: 100%; box-sizing: border-box; overflow: hidden;
+    }
+    #mobile-topbar .mt-left { display: flex; align-items: center; gap: 10px; min-width: 0; overflow: hidden; flex: 1; }
+    #mobile-topbar .mt-logo { font-size: 16px; font-weight: 700; color: var(--teal); }
+    #mobile-topbar .mt-mode { font-size: 11px; color: var(--text3); }
 
-    .stats-row { grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 8px; margin-bottom: 16px; }
-    .form-row { grid-template-columns: 1fr; gap: 12px; }
-    .page-header h2 { font-size: 20px; }
+    .stats-row { grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+    .stat-card { padding: 12px 10px; border-radius: 10px; }
+    .stat-val { font-size: 20px; }
+    .stat-lbl { font-size: 10px; }
 
-    .btn { padding: 14px 20px; font-size: 15px; min-height: 52px; border-radius: 12px; }
-    .btn-sm { padding: 10px 16px; font-size: 13px; min-height: 42px; }
-    input, select, textarea { padding: 14px 16px; font-size: 16px; min-height: 52px; border-radius: 12px; }
-    textarea { min-height: 100px; }
+    .form-row { grid-template-columns: 1fr; gap: 0; }
+    .page-header { margin-bottom: 16px; }
+    .page-header h2 { font-size: 19px; }
+    .page-header p { font-size: 12px; }
 
-    .filter-btn { padding: 9px 16px; font-size: 13px; min-height: 42px; white-space: nowrap; }
-    .filters { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; padding-bottom: 8px; margin: 0 -14px 20px; padding-left: 14px; padding-right: 14px; gap: 8px; }
+    /* Larger touch targets */
+    .btn { padding: 13px 20px; font-size: 14px; min-height: 46px; }
+    .btn-sm { padding: 9px 14px; font-size: 12px; min-height: 38px; }
+    input, select, textarea { padding: 12px 14px; font-size: 15px; min-height: 46px; }
+    textarea { min-height: 90px; }
+
+    .filter-btn { padding: 8px 14px; font-size: 12px; min-height: 38px; white-space: nowrap; }
+    .filters { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; padding-bottom: 4px; margin: 0 -14px 16px; padding-left: 14px; padding-right: 14px; }
     .filters::-webkit-scrollbar { display: none; }
 
-    .expense-card { padding: 16px; border-radius: 12px; margin-bottom: 12px; }
-    .expense-header { flex-direction: column; align-items: flex-start; gap: 8px; }
-    .expense-footer { flex-direction: column; align-items: flex-start; gap: 8px; }
-    .expense-meta, .expense-detail { font-size: 13px; line-height: 1.4; }
+    .expense-card { padding: 14px; border-radius: 12px; }
+    .expense-title { font-size: 14px; }
+    .expense-amount { font-size: 17px; }
 
-    .card { padding: 18px; border-radius: 12px; }
-    .receipt-thumb { width: 72px; height: 72px; }
+    .card { padding: 16px; border-radius: 12px; }
 
-    #submit-btn { position: sticky; bottom: 20px; z-index: 10; margin-top: 20px; }
+    .receipt-thumb { width: 64px; height: 64px; }
 
-    .toast { left: 16px; right: 16px; transform: none; bottom: calc(80px + env(safe-area-inset-bottom)); padding: 16px 20px; }
+    .ops-mode-bar { width: 100%; }
+    .ops-mode-btn { flex: 1; padding: 10px; }
 
+    /* Sticky submit buttons on forms */
+    #submit-btn { position: sticky; bottom: 14px; }
+
+    /* Modal full width on mobile */
+    .modal-box { padding: 18px; border-radius: 14px; }
+
+    .toast { left: 14px; right: 14px; transform: none; bottom: 100px; min-width: auto; }
+    @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    /* Bottom nav for mobile */
     #mobile-nav {
       display: flex !important;
       position: fixed; bottom: 0; left: 0; right: 0;
       background: var(--bg2); border-top: 1px solid var(--border);
-      padding: 8px 4px max(12px, env(safe-area-inset-bottom)); z-index: 200;
+      padding: 8px 4px max(14px, env(safe-area-inset-bottom)); z-index: 200;
       box-shadow: 0 -4px 20px rgba(0,0,0,0.3);
     }
     .mobile-nav-item {
       flex: 1; display: flex; flex-direction: column; align-items: center;
-      gap: 4px; cursor: pointer; padding: 8px 4px; border-radius: 12px;
+      gap: 3px; cursor: pointer; padding: 6px 2px; border-radius: 10px;
       font-size: 10px; color: var(--text3); border: none; background: none;
       font-family: inherit; transition: all 0.15s;
     }
     .mobile-nav-item.active { color: var(--teal); background: var(--teal-dim); }
-    .mobile-nav-item .m-icon { font-size: 20px; }
+    .mobile-nav-item .m-icon { font-size: 19px; }
   }
-
   @media (min-width: 769px) {
     #mobile-nav { display: none !important; }
     #mobile-topbar { display: none !important; }
   }
+
+  /* ── Receipt thumb ── */
+  .receipt-thumb { width: 80px; height: 80px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border); cursor: pointer; }
+  .receipt-thumbs { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 500; padding: 20px;
+  }
+  .modal-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 24px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .modal-header h3 { font-size: 18px; font-weight: 700; }
+  .modal-close { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 20px; }
+
+  .section-title { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
 </style>
 </head>
 <body>
@@ -218,36 +356,1169 @@
   </div>
 </div>
 
-<!-- MAIN APP (your original) -->
+<!-- MAIN APP -->
 <div id="main-app" style="display:none">
-  <!-- your original main app content -->
+  <div id="mobile-topbar">
+    <div class="mt-left">
+      <span id="mt-avatar" style="flex-shrink:0"></span>
+      <div style="min-width:0;overflow:hidden">
+        <div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="mt-name"></div>
+        <div class="mt-mode" id="mt-mode" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+      <button id="mt-ops-switch" style="display:none;background:var(--bg3);border:1px solid var(--border);color:var(--teal);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;padding:6px 10px;border-radius:8px;white-space:nowrap" onclick="toggleOpsModeMobile()"></button>
+      <button onclick="signOut()" style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;font-family:inherit;padding:8px;white-space:nowrap">Sign out</button>
+    </div>
+  </div>
+  <div id="sidebar">
+    <div class="sidebar-logo">
+      <h1>Expensio</h1>
+      <p>Henderson Rowe</p>
+    </div>
+    <div class="sidebar-user">
+      <div class="avatar" id="sidebar-avatar"></div>
+      <div class="sidebar-user-info">
+        <div class="name" id="sidebar-name"></div>
+        <div class="role" id="sidebar-role-label"></div>
+      </div>
+    </div>
+    <nav id="sidebar-nav"></nav>
+    <div class="sidebar-footer">
+      <button class="signout-btn" onclick="signOut()">← Sign out</button>
+    </div>
+  </div>
+
+  <div id="content">
+    <div id="page-content"></div>
+  </div>
+</div>
+
+<!-- Mobile bottom nav -->
+<div id="mobile-nav" style="display:none">
+  <button class="mobile-nav-item active" id="mnav-expenses" onclick="mobileNav('expenses')">
+    <span class="m-icon">🧾</span>Expenses
+  </button>
+  <button class="mobile-nav-item" id="mnav-submit" onclick="mobileNav('submit')">
+    <span class="m-icon">➕</span>Submit
+  </button>
+  <button class="mobile-nav-item" id="mnav-preauth" onclick="mobileNav('preauth')">
+    <span class="m-icon">🔐</span>Pre-Auth
+  </button>
+  <button class="mobile-nav-item" id="mnav-queue" onclick="mobileNav('queue')" style="display:none" id="mnav-queue">
+    <span class="m-icon">🛡</span>Queue
+  </button>
+  <button class="mobile-nav-item" id="mnav-payments" onclick="mobileNav('payments')" style="display:none">
+    <span class="m-icon">💳</span>Payments
+  </button>
+  <button class="mobile-nav-item" id="mnav-reports" onclick="mobileNav('reports')" style="display:none">
+    <span class="m-icon">📊</span>Reports
+  </button>
 </div>
 
 </div>
 
-<!-- Toast and Modal (your original) -->
+<!-- Toast -->
+<div id="toast" class="toast" style="display:none">
+  <span id="toast-icon">✓</span>
+  <span class="toast-text" id="toast-text"></span>
+</div>
+
+<!-- Image Modal -->
+<div id="img-modal" class="modal-overlay" style="display:none" onclick="closeImgModal()">
+  <img id="img-modal-img" src="" style="max-width:95vw;max-height:90vh;border-radius:10px;object-fit:contain">
+</div>
 
 <script>
-// Full script with dropdown fix
+// ── Config ────────────────────────────────────────────────────────────────────
 const FB_PROJECT = 'expensio-ac443';
 const FB_BASE = `https://firestore.googleapis.com/v1/projects/${FB_PROJECT}/databases/(default)/documents`;
 
-// TEAM_DATA and all other code from your original file
+// ── Team Data ──────────────────────────────────────────────────────────────────
+const TEAM_DATA = [
+  { name:'Ana Diaz Diaz', pin:'1234', role:'ops' },
+  { name:'Artur Baluszynski', pin:'1234', role:'ops' },
+  { name:'Ben Ashby', pin:'1111', role:'staff' },
+  { name:'Ben Wheelan', pin:'1111', role:'staff' },
+  { name:'Charles Astor', pin:'1111', role:'staff' },
+  { name:'Cristina Leong', pin:'1234', role:'ops' },
+  { name:'Dom Wright', pin:'1111', role:'staff' },
+  { name:'Eliott Ferguson', pin:'1111', role:'staff' },
+  { name:'Emma McGregor', pin:'1111', role:'staff' },
+  { name:'Emma Taylor', pin:'1111', role:'staff' },
+  { name:'Jacob Burchill', pin:'1111', role:'staff' },
+  { name:'John Whick', pin:'1111', role:'staff' },
+  { name:'Julisuz Czajewski', pin:'1111', role:'staff' },
+  { name:'Justin Hayward', pin:'1111', role:'staff' },
+  { name:'Kevin Reid', pin:'1111', role:'staff' },
+  { name:'Kimmy Beattie', pin:'1234', role:'ops' },
+  { name:'Malean Vuong', pin:'1234', role:'ops' },
+  { name:'Maureen Kirwan', pin:'1111', role:'staff' },
+  { name:'Nicholas Henryanto', pin:'1111', role:'staff' },
+  { name:'Nick Lawson-Smith', pin:'1111', role:'staff' },
+  { name:'Olivia Jackson', pin:'1111', role:'staff' },
+  { name:'Omar Henry', pin:'1111', role:'staff' },
+  { name:'Peter Ashby', pin:'1111', role:'staff' },
+  { name:'Peter Li', pin:'1111', role:'staff' },
+  { name:'Rory Franks', pin:'2017', role:'staff' },
+  { name:'Stephen Hannan', pin:'1111', role:'staff' },
+  { name:'Tom Simpson', pin:'1111', role:'staff' },
+];
 
-function initLogin() {
-  const sel = document.getElementById('login-name');
-  if (!sel) return;
-  sel.innerHTML = '<option value="">Choose your name…</option>';
-  TEAM_DATA.forEach(u => {
-    const o = document.createElement('option');
-    o.value = u.name;
-    o.textContent = u.name;
-    sel.appendChild(o);
-  });
-  // rest of your initLogin
+const CATS = ['Travel','Client/Prospect Meals & Entertainment','Staff Meals & Entertainment','Subsistence','Software & Subscriptions','Office Supplies','Equipment','Training & Education','Other'];
+const HELD_WITH = ['Client','Prospect','Third Party','Other — Please Specify','N/A'];
+const AVATAR_COLORS = [
+  {bg:'#0A2540',text:'#60A5FA'},{bg:'#0A2E20',text:'#34D399'},{bg:'#1E1A08',text:'#FCD34D'},
+  {bg:'#2E0A2E',text:'#E879F9'},{bg:'#1A0A2E',text:'#A78BFA'},{bg:'#2E0A0A',text:'#F87171'},
+  {bg:'#0A1E2E',text:'#38BDF8'},{bg:'#0A2E1A',text:'#4ADE80'},{bg:'#2E1A0A',text:'#FB923C'},
+  {bg:'#0A2A1A',text:'#2DD4BF'},{bg:'#1E0A2E',text:'#C084FC'},{bg:'#2E0A1A',text:'#FB7185'},
+];
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let currentUser = null;
+let currentRole = null;
+let opsMode = null; // 'submit' | 'approve'
+let currentPage = 'expenses';
+let expenses = [];
+let loading = false;
+
+// ── Firebase Helpers ──────────────────────────────────────────────────────────
+function fromVal(v) {
+  if(v.stringValue !== undefined) return v.stringValue;
+  if(v.booleanValue !== undefined) return v.booleanValue;
+  if(v.doubleValue !== undefined) return v.doubleValue;
+  if(v.integerValue !== undefined) return Number(v.integerValue);
+  if(v.nullValue !== undefined) return null;
+  if(v.arrayValue !== undefined) return (v.arrayValue.values||[]).map(fromVal);
+  if(v.mapValue !== undefined) { const o={}; for(const[k,v2] of Object.entries(v.mapValue.fields||{})) o[k]=fromVal(v2); return o; }
+  return null;
+}
+function toVal(val) {
+  if(val===null||val===undefined) return {nullValue:null};
+  if(typeof val==='boolean') return {booleanValue:val};
+  if(typeof val==='number') return {doubleValue:val};
+  if(typeof val==='string') return {stringValue:val};
+  if(Array.isArray(val)) return {arrayValue:{values:val.map(toVal)}};
+  if(typeof val==='object') { const f={}; for(const[k,v] of Object.entries(val)) f[k]=toVal(v); return {mapValue:{fields:f}}; }
+  return {stringValue:String(val)};
+}
+function fromDoc(doc) {
+  const id = doc.name.split('/').pop();
+  const o = {id};
+  for(const[k,v] of Object.entries(doc.fields||{})) o[k]=fromVal(v);
+  return o;
+}
+function toFields(obj) {
+  const f={};
+  for(const[k,v] of Object.entries(obj)) { if(k==='id') continue; f[k]=toVal(v); }
+  return {fields:f};
 }
 
-document.addEventListener('DOMContentLoaded', initLogin);
+async function loadExpenses() {
+  const res = await fetch(`${FB_BASE}/expenses?pageSize=500`);
+  const json = await res.json();
+  if(!json.documents) return [];
+  return json.documents.map(fromDoc).sort((a,b)=>new Date(b.submittedAt)-new Date(a.submittedAt));
+}
+async function saveDoc(id, data) {
+  const res = await fetch(`${FB_BASE}/expenses/${id}`, {
+    method:'PATCH', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(toFields(data))
+  });
+  if(!res.ok) throw new Error('Save failed');
+}
+async function createDoc(id, data) {
+  const res = await fetch(`${FB_BASE}/expenses?documentId=${id}`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(toFields(data))
+  });
+  if(!res.ok) throw new Error('Create failed');
+}
+async function deleteDoc(id) {
+  await fetch(`${FB_BASE}/expenses/${id}`, {method:'DELETE'});
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+function fmtAmt(n) { return '£'+(parseFloat(n)||0).toFixed(2); }
+function fmtDate(iso) {
+  if(!iso) return '';
+  try { return new Date(iso).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}); } catch(e){ return iso; }
+}
+function initials(n) { return n.split(' ').map(w=>w[0]).join('').slice(0,2); }
+function avatarEl(name, size=36) {
+  const idx = TEAM_DATA.findIndex(t=>t.name===name);
+  const col = AVATAR_COLORS[(idx>=0?idx:0)%AVATAR_COLORS.length];
+  return `<div class="avatar" style="width:${size}px;height:${size}px;background:${col.bg};color:${col.text};font-size:${size*0.32}px">${initials(name||'?')}</div>`;
+}
+function pillHtml(status) {
+  const map = {pending:'pill-pending',approved:'pill-approved',rejected:'pill-rejected',converted:'pill-converted'};
+  const labels = {pending:'Pending',approved:'Approved',rejected:'Rejected',converted:'Converted'};
+  return `<span class="pill ${map[status]||'pill-pending'}">${labels[status]||status}</span>`;
+}
+function showToast(msg, icon='✓') {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-text').textContent = msg;
+  document.getElementById('toast-icon').textContent = icon;
+  t.style.display = 'flex';
+  setTimeout(()=>t.style.display='none', 3500);
+}
+function openImgModal(url) {
+  document.getElementById('img-modal-img').src = url;
+  document.getElementById('img-modal').style.display = 'flex';
+}
+function closeImgModal() { document.getElementById('img-modal').style.display = 'none'; }
+
+// ── Login ─────────────────────────────────────────────────────────────────────
+function initLogin() {
+  const sel = document.getElementById('login-name');
+  TEAM_DATA.forEach(u => {
+    const o = document.createElement('option');
+    o.value = u.name; o.textContent = u.name;
+    sel.appendChild(o);
+  });
+  sel.addEventListener('change', ()=>{
+    document.getElementById('login-pin-section').style.display = sel.value ? 'block' : 'none';
+    document.getElementById('login-pin').value = '';
+    document.getElementById('login-error').textContent = '';
+  });
+  document.getElementById('login-pin').addEventListener('keydown', e=>{ if(e.key==='Enter') handleLogin(); });
+}
+
+function handleLogin() {
+  const name = document.getElementById('login-name').value;
+  const pin = document.getElementById('login-pin').value;
+  const user = TEAM_DATA.find(u=>u.name===name);
+  if(!user) return;
+  if(pin !== user.pin) {
+    document.getElementById('login-error').textContent = 'Incorrect PIN. Please try again.';
+    return;
+  }
+  currentUser = name;
+  currentRole = user.role;
+  if(currentRole === 'ops') {
+    showOpsRoleSelect();
+  } else {
+    startApp();
+  }
+}
+
+function showOpsRoleSelect() {
+  document.getElementById('login-screen').innerHTML = `
+    <div class="login-box">
+      <div class="login-logo">
+        <h1>Expensio</h1>
+        <p>How would you like to use Expensio today?</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <button class="btn" style="background:var(--bg3);border:1px solid var(--teal);padding:20px;border-radius:14px;width:100%;text-align:left;cursor:pointer" onclick="setOpsMode('submit')">
+          <div style="font-size:24px;margin-bottom:6px">📝</div>
+          <div style="font-size:16px;font-weight:700;color:var(--text)">Submit expenses</div>
+          <div style="font-size:13px;color:var(--text3);margin-top:4px">Submit and manage your own expenses</div>
+        </button>
+        <button class="btn" style="background:var(--bg3);border:1px solid var(--border);padding:20px;border-radius:14px;width:100%;text-align:left;cursor:pointer" onclick="setOpsMode('approve')">
+          <div style="font-size:24px;margin-bottom:6px">🛡</div>
+          <div style="font-size:16px;font-weight:700;color:var(--text)">Approve expenses</div>
+          <div style="font-size:13px;color:var(--text3);margin-top:4px">Review and approve the team's submissions</div>
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function setOpsMode(mode) {
+  opsMode = mode;
+  startApp();
+}
+
+function startApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('main-app').style.display = 'flex';
+  setupSidebar();
+  setupMobileNav();
+  currentPage = currentRole==='ops' && opsMode==='approve' ? 'queue' : 'expenses';
+  refreshData().then(()=>renderPage());
+}
+
+function signOut() {
+  currentUser = null; currentRole = null; opsMode = null; expenses = [];
+  document.getElementById('main-app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('login-screen').innerHTML = `
+    <div class="login-box">
+      <div class="login-logo"><h1>Expensio</h1><p>Expense management for Henderson Rowe</p></div>
+      <div class="form-group"><label>Select your name</label><select id="login-name"><option value="">Choose your name…</option></select></div>
+      <div id="login-pin-section" style="display:none">
+        <div class="form-group"><label>Enter your PIN</label><input type="password" id="login-pin" maxlength="4" placeholder="••••" inputmode="numeric"></div>
+        <button class="btn btn-primary" style="width:100%" onclick="handleLogin()">Sign in →</button>
+        <p id="login-error" style="color:var(--red);font-size:12px;margin-top:8px;text-align:center"></p>
+      </div>
+    </div>`;
+  initLogin();
+}
+
+// ── Sidebar ───────────────────────────────────────────────────────────────────
+function setupSidebar() {
+  const idx = TEAM_DATA.findIndex(t=>t.name===currentUser);
+  const col = AVATAR_COLORS[(idx>=0?idx:0)%AVATAR_COLORS.length];
+  const av = document.getElementById('sidebar-avatar');
+  av.textContent = initials(currentUser);
+  av.style.background = col.bg; av.style.color = col.text;
+  document.getElementById('sidebar-name').textContent = currentUser;
+  document.getElementById('sidebar-role-label').textContent = currentRole==='ops' ? `Ops — ${opsMode==='approve'?'Approver':'Submitter'}` : 'Staff';
+
+  // Mobile topbar
+  document.getElementById('mt-avatar').innerHTML = avatarEl(currentUser, 32);
+  document.getElementById('mt-name').textContent = currentUser;
+  document.getElementById('mt-mode').textContent = currentRole==='ops' ? `Ops — ${opsMode==='approve'?'Approver':'Submitter'}` : 'Staff';
+  const opsSwitch = document.getElementById('mt-ops-switch');
+  if(currentRole==='ops') {
+    opsSwitch.style.display = 'block';
+    opsSwitch.textContent = opsMode==='approve' ? '📝 Submit' : '🛡 Approve';
+  } else {
+    opsSwitch.style.display = 'none';
+  }
+
+  renderNav();
+}
+
+function renderNav() {
+  const pending = expenses.filter(e=>e.status==='pending'&&e.type!=='preauth').length;
+  const isApprover = currentRole==='ops' && opsMode==='approve';
+  const isSubmitter = currentRole==='staff' || (currentRole==='ops' && opsMode==='submit');
+
+  let nav = '';
+
+  if(isApprover) {
+    nav += `
+      <div class="nav-section">
+        <div class="nav-label">Approver</div>
+        ${navItem('queue','🛡','Queue', pending > 0 ? `<span class="nav-badge">${pending}</span>` : '')}
+        ${navItem('payments','💳','Payments')}
+        ${navItem('reports','📊','Reports')}
+      </div>`;
+  }
+
+  if(isSubmitter) {
+    nav += `
+      <div class="nav-section">
+        <div class="nav-label">My Expenses</div>
+        ${navItem('expenses','🧾','My Expenses')}
+        ${navItem('submit','➕','Submit Expense')}
+        ${navItem('preauth','🔐','Pre-Authorisations')}
+      </div>`;
+  }
+
+  if(currentRole==='ops') {
+    nav += `
+      <div class="nav-section" style="margin-top:8px">
+        <div class="nav-label">Switch Mode</div>
+        ${navItem('_submit_mode','📝','Submit Mode','','opsMode!==\'approve\'')}
+        ${navItem('_approve_mode','🛡','Approve Mode','','opsMode===\'approve\'')}
+      </div>`;
+  }
+
+  document.getElementById('sidebar-nav').innerHTML = nav;
+}
+
+function navItem(page, icon, label, badge='', activeCheck=null) {
+  const isActive = activeCheck ? eval(activeCheck) : currentPage === page;
+  return `<button class="nav-item ${isActive?'active':''}" onclick="navigate('${page}')">
+    <span class="icon">${icon}</span>${label}${badge}
+  </button>`;
+}
+
+function toggleOpsModeMobile() {
+  if(opsMode === 'approve') { opsMode = 'submit'; currentPage = 'expenses'; }
+  else { opsMode = 'approve'; currentPage = 'queue'; }
+  setupSidebar();
+  setupMobileNav();
+  renderPage();
+}
+
+function navigate(page) {
+  if(page === '_submit_mode') { opsMode = 'submit'; currentPage = 'expenses'; renderNav(); renderPage(); return; }
+  if(page === '_approve_mode') { opsMode = 'approve'; currentPage = 'queue'; renderNav(); renderPage(); return; }
+  currentPage = page;
+  renderNav();
+  renderPage();
+}
+
+// ── Data ─────────────────────────────────────────────────────────────────────
+async function refreshData() {
+  loading = true;
+  try {
+    expenses = await loadExpenses();
+    // Auto-approve
+    const now = new Date();
+    for(const e of expenses) {
+      if(e.status==='pending' && e.autoApproveAt && new Date(e.autoApproveAt)<=now) {
+        const updated = {...e, status:'approved', reviewedAt:now.toISOString(), autoApproveAt:null};
+        await saveDoc(e.id, updated);
+        Object.assign(e, updated);
+      }
+    }
+  } catch(err) { console.error(err); }
+  loading = false;
+}
+
+// ── Pages ─────────────────────────────────────────────────────────────────────
+function renderPage() {
+  const c = document.getElementById('page-content');
+  switch(currentPage) {
+    case 'expenses': c.innerHTML = renderMyExpenses(); break;
+    case 'submit': c.innerHTML = renderSubmitForm(); break;
+    case 'preauth': c.innerHTML = renderMyPreAuths(); break;
+    case 'queue': c.innerHTML = renderOpsQueue(); break;
+    case 'payments': c.innerHTML = renderPayments(); break;
+    case 'reports': c.innerHTML = renderReports(); break;
+    default: c.innerHTML = renderMyExpenses();
+  }
+  attachEventListeners();
+}
+
+// ── My Expenses ───────────────────────────────────────────────────────────────
+function renderMyExpenses() {
+  const myExp = expenses.filter(e=>e.submitter===currentUser && e.type!=='preauth');
+  const pending = myExp.filter(e=>e.status==='pending').length;
+  const approved = myExp.filter(e=>e.status==='approved').reduce((s,e)=>s+(parseFloat(e.amount)||0),0);
+
+  return `
+    <div class="page-header"><h2>My Expenses</h2><p>${currentUser}</p></div>
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-val">${myExp.length}</div><div class="stat-lbl">Submitted</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--amber)">${pending}</div><div class="stat-lbl">Pending</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--green)">${fmtAmt(approved)}</div><div class="stat-lbl">Approved</div></div>
+    </div>
+    <div class="filters">
+      <button class="filter-btn active" onclick="filterExpenses('all',this)">All</button>
+      <button class="filter-btn" onclick="filterExpenses('pending',this)">Pending</button>
+      <button class="filter-btn" onclick="filterExpenses('approved',this)">Approved</button>
+      <button class="filter-btn" onclick="filterExpenses('rejected',this)">Rejected</button>
+    </div>
+    <div id="expense-list">
+      ${myExp.length===0 ? '<div class="empty"><div class="emoji">🧾</div><p>No expenses yet</p></div>' : myExp.map(e=>expenseCardHtml(e)).join('')}
+    </div>`;
+}
+
+function expenseCardHtml(e) {
+  const receipts = (e.receipts||[]).filter(r=>r.url||r.uri);
+  return `
+    <div class="expense-card" data-id="${e.id}">
+      <div class="expense-header">
+        <div style="min-width:0;overflow:hidden">
+          <div class="expense-title">${e.title||''}</div>
+          <div class="expense-meta">${e.category||''} ${e.date?'· '+fmtDate(e.date):''} · submitted ${fmtDate(e.submittedAt)}</div>
+          ${e.heldWith?`<div class="expense-detail">📋 ${e.heldWith}${e.clientName?' — '+e.clientName:''}</div>`:''}
+          ${e.description?`<div class="expense-detail">${e.description}</div>`:''}
+        </div>
+        <div class="expense-amount">${fmtAmt(e.amount)}</div>
+      </div>
+      ${receipts.length>0?`<div class="receipt-thumbs">${receipts.map(r=>`<img class="receipt-thumb" src="${r.url||r.uri}" onclick="openImgModal('${r.url||r.uri}')" alt="Receipt">`).join('')}</div>`:''}
+      <div class="expense-footer">
+        ${pillHtml(e.status)}
+        ${e.status==='pending'?`<div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="recallExpense('${e.id}','${(e.title||'').replace(/'/g,"\\'")}')">↩ Recall</button>
+        </div>`:''}
+        ${e.reviewNote?`<div></div>`:''}
+      </div>
+      ${e.reviewNote?`<div class="note-box">${e.reviewNote}</div>`:''}
+    </div>`;
+}
+
+function filterExpenses(status, btn) {
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const myExp = expenses.filter(e=>e.submitter===currentUser && e.type!=='preauth');
+  const filtered = status==='all' ? myExp : myExp.filter(e=>e.status===status);
+  document.getElementById('expense-list').innerHTML = filtered.length===0
+    ? '<div class="empty"><div class="emoji">🧾</div><p>Nothing here</p></div>'
+    : filtered.map(e=>expenseCardHtml(e)).join('');
+}
+
+async function recallExpense(id, title) {
+  if(!confirm(`Remove "${title}" from the queue?`)) return;
+  try {
+    await deleteDoc(id);
+    expenses = expenses.filter(e=>e.id!==id);
+    renderPage();
+    showToast('Expense recalled');
+  } catch(e) { alert('Could not recall. Please try again.'); }
+}
+
+// ── Submit Form ───────────────────────────────────────────────────────────────
+function renderSubmitForm() {
+  return `
+    <div class="page-header"><h2>Submit Expense</h2></div>
+    <div class="card" style="max-width:680px">
+      <div id="preauth-toggle" style="display:flex;align-items:center;justify-content:space-between;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:20px;cursor:pointer;gap:12px" onclick="togglePreAuth()">
+        <div style="min-width:0">
+          <div style="font-size:14px;font-weight:600;color:var(--text2)" id="preauth-label">🔐 Pre-authorisation request</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">Toggle on to request approval before spending</div>
+        </div>
+        <div id="preauth-check" style="width:24px;height:24px;border-radius:50%;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0"></div>
+      </div>
+      <div class="form-group">
+        <label id="title-label">Expense title</label>
+        <input type="text" id="f-title" placeholder="e.g. Client lunch at Nobu">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Amount (£)</label>
+          <input type="number" id="f-amount" placeholder="0.00" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="f-date" value="${new Date().toISOString().split('T')[0]}">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <select id="f-category">
+          <option value="">Select category…</option>
+          ${CATS.map(c=>`<option value="${c}">${c}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Held with</label>
+        <select id="f-heldwith" onchange="checkHeldWith()">
+          <option value="">Select…</option>
+          ${HELD_WITH.map(h=>`<option value="${h}">${h}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group" id="client-name-group" style="display:none">
+        <label id="client-label">Client name <span style="color:var(--red)">(required)</span></label>
+        <input type="text" id="f-clientname" placeholder="Name…">
+      </div>
+      <div id="attendees-section" style="display:none">
+        <div class="form-group">
+          <label>Staff attendees</label>
+          <input type="text" id="f-staff" placeholder="e.g. Rory Franks, Tom Simpson">
+        </div>
+        <div class="form-group">
+          <label>Client/Prospect attendees</label>
+          <input type="text" id="f-clients" placeholder="e.g. John Smith (Acme Corp)">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Description <span style="color:var(--text3)">(optional)</span></label>
+        <textarea id="f-desc" placeholder="Brief justification or context…"></textarea>
+      </div>
+      <div class="form-group" id="receipt-section">
+        <label>Receipt photo <span style="color:var(--red)">(required)</span></label>
+        <input type="file" id="f-receipt" accept="image/*" multiple style="padding:8px">
+        <div id="receipt-previews" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"></div>
+      </div>
+      <button class="btn btn-primary" style="width:100%;padding:14px" onclick="submitExpense()" id="submit-btn">Submit for approval</button>
+    </div>`;
+}
+
+let isPreAuth = false;
+function togglePreAuth() {
+  isPreAuth = !isPreAuth;
+  const check = document.getElementById('preauth-check');
+  const toggle = document.getElementById('preauth-toggle');
+  const label = document.getElementById('preauth-label');
+  const titleLabel = document.getElementById('title-label');
+  const submitBtn = document.getElementById('submit-btn');
+  const receiptSection = document.getElementById('receipt-section');
+  if(isPreAuth) {
+    check.textContent = '✓'; check.style.background = 'var(--amber)'; check.style.color = '#000';
+    toggle.style.borderColor = 'var(--amber)'; label.style.color = 'var(--amber)';
+    titleLabel.textContent = 'Description of expense';
+    submitBtn.textContent = 'Request pre-authorisation';
+    submitBtn.style.background = 'var(--amber)';
+    receiptSection.style.display = 'none';
+  } else {
+    check.textContent = ''; check.style.background = 'var(--bg3)'; check.style.color = '';
+    toggle.style.borderColor = 'var(--border)'; label.style.color = 'var(--text2)';
+    titleLabel.textContent = 'Expense title';
+    submitBtn.textContent = 'Submit for approval';
+    submitBtn.style.background = 'var(--teal)';
+    receiptSection.style.display = 'block';
+  }
+}
+
+function checkHeldWith() {
+  const hw = document.getElementById('f-heldwith').value;
+  const needsClient = ['Client','Prospect','Third Party'].includes(hw);
+  const needsAttendees = document.getElementById('f-category').value.includes('Meals') || document.getElementById('f-category').value.includes('Entertainment');
+  document.getElementById('client-name-group').style.display = needsClient ? 'block' : 'none';
+  document.getElementById('attendees-section').style.display = needsAttendees ? 'block' : 'none';
+  if(needsClient) document.getElementById('client-label').textContent = `${hw} name (required)`;
+}
+
+async function submitExpense() {
+  const title = document.getElementById('f-title').value.trim();
+  const amount = document.getElementById('f-amount').value;
+  const category = document.getElementById('f-category').value;
+  const heldWith = document.getElementById('f-heldwith').value;
+  const clientName = document.getElementById('f-clientname')?.value?.trim()||'';
+  const desc = document.getElementById('f-desc').value.trim();
+  const date = document.getElementById('f-date').value;
+  const staff = document.getElementById('f-staff')?.value?.trim()||'';
+  const clients = document.getElementById('f-clients')?.value?.trim()||'';
+
+  if(!title) { alert('Please enter a title.'); return; }
+  if(!amount||parseFloat(amount)<=0) { alert('Please enter a valid amount.'); return; }
+  if(!category) { alert('Please select a category.'); return; }
+  if(!heldWith) { alert('Please select who this was held with.'); return; }
+  const needsClient = ['Client','Prospect','Third Party'].includes(heldWith);
+  if(needsClient && !clientName) { alert('Please enter the client/prospect name.'); return; }
+
+  const receipts = [];
+  if(!isPreAuth) {
+    const files = document.getElementById('f-receipt').files;
+    if(files.length === 0) { alert('Please attach a receipt photo.'); return; }
+    // Store as data URLs for web version
+    for(const f of files) {
+      const dataUrl = await new Promise(res=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.readAsDataURL(f); });
+      receipts.push({ uri: dataUrl, name: f.name, url: null, uploaded: false });
+    }
+  }
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true; btn.textContent = 'Submitting…';
+
+  try {
+    const now = new Date().toISOString();
+    const id = (isPreAuth?'preauth_':'') + Date.now().toString();
+    const amt = parseFloat(amount);
+    const doc = {
+      id, title, amount: amt, category, date, description: desc,
+      heldWith, clientName, staffAttendees: staff, clientAttendees: clients,
+      submitter: currentUser, type: isPreAuth ? 'preauth' : 'expense',
+      status: 'pending', submittedAt: now, reviewNote: null, reviewedAt: null,
+      paid: false, paidAt: null, receipts,
+      autoApproveAt: (!isPreAuth && amt < 10) ? new Date(Date.now()+15*60*1000).toISOString() : null,
+    };
+    await createDoc(id, doc);
+    expenses.unshift(doc);
+    isPreAuth = false;
+    showToast(isPreAuth ? 'Pre-auth request submitted' : 'Expense submitted successfully');
+    currentPage = 'expenses';
+    renderNav();
+    renderPage();
+  } catch(e) {
+    alert('Submission failed. Please try again.');
+    btn.disabled = false;
+    btn.textContent = isPreAuth ? 'Request pre-authorisation' : 'Submit for approval';
+  }
+}
+
+// ── My Pre-Auths ──────────────────────────────────────────────────────────────
+function renderMyPreAuths() {
+  const preAuths = expenses.filter(e=>e.type==='preauth'&&e.submitter===currentUser);
+  return `
+    <div class="page-header"><h2>Pre-Authorisations</h2><p>Your pre-auth requests</p></div>
+    ${preAuths.length===0?'<div class="empty"><div class="emoji">🔐</div><p>No pre-auth requests yet</p></div>':
+    preAuths.map(pa=>`
+      <div class="expense-card">
+        <div class="expense-header">
+          <div>
+            <div class="expense-title">${pa.title||''}</div>
+            <div class="expense-meta">${pa.category||''} · submitted ${fmtDate(pa.submittedAt)}</div>
+            ${pa.heldWith?`<div class="expense-detail">📋 ${pa.heldWith}${pa.clientName?' — '+pa.clientName:''}</div>`:''}
+          </div>
+          <div class="expense-amount" style="color:var(--amber)">${fmtAmt(pa.amount)}</div>
+        </div>
+        <div class="expense-footer">
+          ${pillHtml(pa.status)}
+          <span style="font-size:11px;color:var(--text3)">estimated</span>
+        </div>
+        ${pa.reviewNote?`<div class="note-box">${pa.reviewNote}</div>`:''}
+        ${pa.status==='approved'&&pa.status!=='converted'?`
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border2)">
+            <button class="btn btn-primary btn-sm" onclick="showConvertForm('${pa.id}')">Submit actual expense →</button>
+            <div id="convert-form-${pa.id}" style="display:none;margin-top:12px">
+              <div class="form-group"><label>Final amount (£)</label><input type="number" id="convert-amount-${pa.id}" value="${pa.amount}" step="0.01"></div>
+              <div class="form-group"><label>Receipt <span style="color:var(--red)">(required)</span></label><input type="file" id="convert-receipt-${pa.id}" accept="image/*"></div>
+              <div class="form-group"><label>Additional notes</label><input type="text" id="convert-notes-${pa.id}" placeholder="Any changes from original request…"></div>
+              <div style="display:flex;gap:8px;margin-top:8px">
+                <button class="btn btn-primary btn-sm" onclick="convertPreAuth('${pa.id}','${(pa.title||'').replace(/'/g,"\\'")}','${pa.category||''}','${pa.heldWith||''}','${pa.clientName||''}')">Submit for approval</button>
+                <button class="btn btn-ghost btn-sm" onclick="document.getElementById('convert-form-${pa.id}').style.display='none'">Cancel</button>
+              </div>
+            </div>
+          </div>`:''}
+      </div>`).join('')}`;
+}
+
+function showConvertForm(id) {
+  document.getElementById(`convert-form-${id}`).style.display='block';
+}
+
+async function convertPreAuth(preAuthId, title, category, heldWith, clientName) {
+  const amount = parseFloat(document.getElementById(`convert-amount-${preAuthId}`).value);
+  const notes = document.getElementById(`convert-notes-${preAuthId}`).value;
+  const files = document.getElementById(`convert-receipt-${preAuthId}`).files;
+  if(!amount||amount<=0) { alert('Please enter the final amount.'); return; }
+  if(files.length===0) { alert('Please attach a receipt.'); return; }
+
+  const receipts = [];
+  for(const f of files) {
+    const dataUrl = await new Promise(res=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.readAsDataURL(f); });
+    receipts.push({ uri: dataUrl, name: f.name, url: null, uploaded: false });
+  }
+
+  try {
+    const now = new Date().toISOString();
+    const id = Date.now().toString();
+    const newExp = {
+      id, title, amount, category, heldWith, clientName,
+      date: now.split('T')[0], description: notes,
+      submitter: currentUser, type: 'expense',
+      status: 'pending', submittedAt: now,
+      reviewNote: null, reviewedAt: null,
+      paid: false, paidAt: null, receipts,
+      preAuthRef: preAuthId,
+    };
+    await createDoc(id, newExp);
+    // Mark pre-auth as converted
+    const pa = expenses.find(e=>e.id===preAuthId);
+    if(pa) {
+      const updated = {...pa, status:'converted'};
+      await saveDoc(preAuthId, updated);
+      Object.assign(pa, updated);
+    }
+    expenses.unshift(newExp);
+    showToast('Expense submitted for approval');
+    renderPage();
+  } catch(e) { alert('Submission failed. Please try again.'); }
+}
+
+// ── Ops Queue ─────────────────────────────────────────────────────────────────
+function renderOpsQueue() {
+  const normalExp = expenses.filter(e=>e.type!=='preauth');
+  const preAuths = expenses.filter(e=>e.type==='preauth'&&e.status==='pending');
+  const pending = normalExp.filter(e=>e.status==='pending').length;
+
+  return `
+    <div class="page-header"><h2>Ops Queue</h2>${pending>0?`<p>${pending} pending</p>`:''}</div>
+    ${preAuths.length>0?`
+      <div style="background:var(--bg2);border:1px solid var(--amber);border-radius:14px;padding:16px;margin-bottom:20px;box-sizing:border-box">
+        <div class="section-title" style="color:var(--amber)">🔐 Pre-auth requests (${preAuths.length})</div>
+        ${preAuths.map(pa=>preAuthOpsCardHtml(pa)).join('')}
+      </div>`:''}
+    <div class="filters">
+      <button class="filter-btn active" onclick="filterQueue('pending',this)">Pending (${pending})</button>
+      <button class="filter-btn" onclick="filterQueue('approved',this)">Approved</button>
+      <button class="filter-btn" onclick="filterQueue('rejected',this)">Rejected</button>
+      <button class="filter-btn" onclick="filterQueue('all',this)">All</button>
+    </div>
+    <div id="queue-list">
+      ${renderQueueItems(normalExp.filter(e=>e.status==='pending'))}
+    </div>`;
+}
+
+function preAuthOpsCardHtml(pa) {
+  const isSelf = pa.submitter===currentUser;
+  return `
+    <div style="border-top:1px solid rgba(245,158,11,0.2);padding-top:12px;margin-top:10px;first:margin-top:0">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div style="display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden">
+          ${avatarEl(pa.submitter,28)}
+          <div style="min-width:0;overflow:hidden">
+            <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${pa.submitter}</div>
+            <div style="font-size:12px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${pa.title} · ${fmtDate(pa.submittedAt)}</div>
+            ${pa.category?`<div style="font-size:11px;color:var(--text3)">${pa.category}</div>`:''}
+          </div>
+        </div>
+        <div style="font-size:16px;font-weight:700;color:var(--amber);flex-shrink:0;white-space:nowrap">${fmtAmt(pa.amount)}</div>
+      </div>
+      ${!isSelf?`
+        <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input type="text" id="pa-note-${pa.id}" placeholder="Note (required for rejection)…" style="flex:1 1 100%;min-width:160px;padding:8px 12px;font-size:12px;box-sizing:border-box">
+          <button class="btn btn-success btn-sm" onclick="reviewItem('${pa.id}','approved','pa-note-${pa.id}',true)" style="flex:1">✓ Approve</button>
+          <button class="btn btn-danger btn-sm" onclick="reviewItem('${pa.id}','rejected','pa-note-${pa.id}',true)" style="flex:1">✕ Reject</button>
+        </div>`:`<div style="font-size:12px;color:var(--amber);margin-top:8px">🔒 You cannot approve your own pre-auth request.</div>`}
+    </div>`;
+}
+
+function renderQueueItems(items) {
+  if(items.length===0) return '<div class="empty"><div class="emoji">✅</div><p>Queue is clear</p></div>';
+  return items.map(e=>opsCardHtml(e)).join('');
+}
+
+function opsCardHtml(e) {
+  const isSelf = e.submitter===currentUser;
+  const canReview = e.status==='pending' && !isSelf;
+  const receipts = (e.receipts||[]).filter(r=>r.url||r.uri);
+  return `
+    <div class="expense-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px;min-width:0;overflow:hidden">
+          ${avatarEl(e.submitter)}
+          <div style="min-width:0;overflow:hidden">
+            <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.submitter}</div>
+            <div style="font-size:11px;color:var(--text3)">${fmtDate(e.submittedAt)}</div>
+          </div>
+        </div>
+        <div style="font-size:20px;font-weight:700;flex-shrink:0;white-space:nowrap">${fmtAmt(e.amount)}</div>
+      </div>
+      <div style="font-size:16px;font-weight:600;margin-bottom:4px">${e.title||''}</div>
+      <div style="font-size:12px;color:var(--text3)">${e.category||''}${e.date?' · '+fmtDate(e.date):''}</div>
+      ${e.heldWith?`<div class="expense-detail">📋 ${e.heldWith}${e.clientName?' — '+e.clientName:''}</div>`:''}
+      ${e.staffAttendees?`<div class="expense-detail">👥 Staff: ${e.staffAttendees}</div>`:''}
+      ${e.clientAttendees?`<div class="expense-detail">🤝 Clients: ${e.clientAttendees}</div>`:''}
+      ${e.description?`<div class="expense-detail" style="margin-top:6px">${e.description}</div>`:''}
+      ${receipts.length>0?`<div class="receipt-thumbs">${receipts.map(r=>`<img class="receipt-thumb" src="${r.url||r.uri}" onclick="openImgModal('${r.url||r.uri}')" alt="Receipt">`).join('')}</div>`:'<div style="font-size:12px;color:var(--amber);margin-top:8px">⚠️ No receipt attached</div>'}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">${pillHtml(e.status)}${e.reviewedAt?`<span style="font-size:11px;color:var(--text3)">Reviewed ${fmtDate(e.reviewedAt)}</span>`:''}</div>
+      ${e.reviewNote?`<div class="note-box">${e.reviewNote}</div>`:''}
+      ${isSelf&&e.status==='pending'?`<div style="margin-top:10px;display:flex;align-items:center;gap:8px"><span>🔒</span><span style="font-size:13px;color:var(--amber)">You cannot approve your own expense.</span></div>`:''}
+      ${canReview?`
+        <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border2)">
+          <div class="form-group">
+            <input type="text" id="note-${e.id}" placeholder="Add a note (required for rejection)…">
+          </div>
+          <div style="margin-bottom:8px">
+            <label style="font-size:12px;cursor:pointer" onclick="document.getElementById('amend-${e.id}').style.display=document.getElementById('amend-${e.id}').style.display==='none'?'flex':'none'">▸ Amend expense amount</label>
+            <div id="amend-${e.id}" style="display:none;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap">
+              <span style="font-size:12px;color:var(--text3);white-space:nowrap">Original: ${fmtAmt(e.amount)}</span>
+              <input type="number" id="amend-amt-${e.id}" placeholder="New amount (£)" style="max-width:150px;flex:1;min-width:120px;padding:6px 10px;font-size:12px">
+            </div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-success" onclick="reviewExpense('${e.id}','approved')" style="flex:1">✓ Approve</button>
+            <button class="btn btn-danger" onclick="reviewExpense('${e.id}','rejected')" style="flex:1">✕ Reject</button>
+          </div>
+        </div>`:''}
+    </div>`;
+}
+
+function filterQueue(status, btn) {
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const normalExp = expenses.filter(e=>e.type!=='preauth');
+  const filtered = status==='all' ? normalExp : normalExp.filter(e=>e.status===status);
+  document.getElementById('queue-list').innerHTML = renderQueueItems(filtered);
+  attachEventListeners();
+}
+
+async function reviewItem(id, status, noteId, requireNote=false) {
+  const note = document.getElementById(noteId)?.value?.trim()||'';
+  if(status==='rejected' && !note) { alert('Please add a reason for rejection.'); return; }
+  try {
+    const expense = expenses.find(e=>e.id===id);
+    if(!expense) return;
+    const updated = {...expense, status, reviewNote:note||null, reviewedAt:new Date().toISOString()};
+    await saveDoc(id, updated);
+    Object.assign(expense, updated);
+    showToast(status==='approved'?'Approved':'Rejected');
+    renderPage();
+  } catch(e) { alert('Could not save. Please try again.'); }
+}
+
+async function reviewExpense(id, status) {
+  const note = document.getElementById(`note-${id}`)?.value?.trim()||'';
+  if(status==='rejected' && !note) { alert('Please add a reason for rejection.'); return; }
+  const amendEl = document.getElementById(`amend-amt-${id}`);
+  const newAmount = amendEl?.value ? parseFloat(amendEl.value) : null;
+  try {
+    const expense = expenses.find(e=>e.id===id);
+    if(!expense) return;
+    let reviewNote = note||null;
+    const updated = {...expense, status, reviewNote, reviewedAt:new Date().toISOString()};
+    if(newAmount && newAmount>0 && newAmount!==parseFloat(expense.amount)) {
+      updated.amount = newAmount;
+      updated.originalAmount = expense.amount;
+      updated.amendedAmount = true;
+      updated.reviewNote = `${note?note+' — ':''}Amount amended from ${fmtAmt(expense.amount)} to ${fmtAmt(newAmount)}.`;
+    }
+    await saveDoc(id, updated);
+    Object.assign(expense, updated);
+    showToast(status==='approved'?'Approved':'Rejected');
+    renderPage();
+  } catch(e) { alert('Could not save. Please try again.'); }
+}
+
+// ── Payments ──────────────────────────────────────────────────────────────────
+function renderPayments() {
+  const TEAM = TEAM_DATA.map(t=>t.name);
+  const normalExp = expenses.filter(e=>e.type!=='preauth');
+  const summary = TEAM.map((member,i)=>{
+    const unpaid = normalExp.filter(e=>e.submitter===member&&e.status==='approved'&&!e.paid);
+    const paid = normalExp.filter(e=>e.submitter===member&&e.status==='approved'&&e.paid);
+    return {member, unpaid, paid, unpaidTotal:unpaid.reduce((s,e)=>s+(parseFloat(e.amount)||0),0), paidTotal:paid.reduce((s,e)=>s+(parseFloat(e.amount)||0),0)};
+  }).filter(s=>s.unpaid.length>0||s.paid.length>0);
+
+  const preAuthSummary = TEAM.map(member=>{
+    const pas = expenses.filter(e=>e.type==='preauth'&&e.submitter===member&&e.status==='approved'&&e.status!=='converted');
+    return {member, pas, total:pas.reduce((s,e)=>s+(parseFloat(e.amount)||0),0)};
+  }).filter(s=>s.pas.length>0);
+
+  const grandTotal = summary.reduce((s,m)=>s+(m.unpaidTotal||0),0);
+  const owed = summary.filter(m=>m.unpaidTotal>0);
+
+  return `
+    <div class="page-header"><h2>Payments</h2></div>
+    <div style="display:flex;gap:8px;margin-bottom:20px">
+      <button class="filter-btn active" id="pay-tab-payments" onclick="switchPayTab('payments',this)">💳 Payments</button>
+      <button class="filter-btn" id="pay-tab-preauth" onclick="switchPayTab('preauth',this)">🔐 Pre-approved ${preAuthSummary.length>0?`(${preAuthSummary.length})`:''}</button>
+    </div>
+
+    <div id="pay-content-payments">
+      <div class="stat-card" style="margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;gap:12px">
+        <div style="min-width:0"><div style="font-size:12px;color:var(--teal);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Total outstanding</div>
+        <div style="font-size:32px;font-weight:700;color:var(--teal)">£${grandTotal.toFixed(2)}</div>
+        <div style="font-size:13px;color:var(--text2);margin-top:4px">${owed.length} team member${owed.length!==1?'s':''} to pay</div></div>
+        <div style="font-size:32px;flex-shrink:0">💳</div>
+      </div>
+      ${owed.length===0?'<div class="empty"><div class="emoji">✅</div><p>All expenses paid up</p></div>':
+      owed.map(m=>`
+        <div class="expense-card">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+            ${avatarEl(m.member,44)}
+            <div style="flex:1;min-width:0;overflow:hidden">
+              <div style="font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.member}</div>
+              <div style="font-size:12px;color:var(--text3);margin-top:2px">${m.unpaid.length} expense${m.unpaid.length!==1?'s':''} approved</div>
+            </div>
+            <div style="font-size:18px;font-weight:700;flex-shrink:0;white-space:nowrap">${fmtAmt(m.unpaidTotal)}</div>
+          </div>
+          ${m.unpaid.map(e=>`<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-top:1px solid var(--border2);gap:10px"><div style="min-width:0;overflow:hidden"><div style="font-size:13px;font-weight:600">${e.title}</div><div style="font-size:11px;color:var(--text3)">${e.category}${e.date?' · '+fmtDate(e.date):''}</div></div><div style="font-size:14px;font-weight:700;flex-shrink:0;white-space:nowrap">${fmtAmt(e.amount)}</div></div>`).join('')}
+          <button class="btn btn-primary" style="width:100%;margin-top:12px" onclick="markPaid('${m.member}')">Mark all as paid — ${fmtAmt(m.unpaidTotal)}</button>
+        </div>`).join('')}
+    </div>
+
+    <div id="pay-content-preauth" style="display:none">
+      <div class="stat-card" style="margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;border-color:var(--amber)">
+        <div><div style="font-size:12px;color:var(--amber);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Pre-approved total</div>
+        <div style="font-size:32px;font-weight:700;color:var(--amber)">£${preAuthSummary.reduce((s,m)=>s+m.total,0).toFixed(2)}</div>
+        <div style="font-size:13px;color:var(--text2);margin-top:4px">${preAuthSummary.length} member${preAuthSummary.length!==1?'s':''} with open pre-auths</div></div>
+        <div style="font-size:32px;flex-shrink:0">🔐</div>
+      </div>
+      ${preAuthSummary.length===0?'<div class="empty"><div class="emoji">✅</div><p>No open pre-authorisations</p></div>':
+      preAuthSummary.map(m=>`
+        <div class="expense-card">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+            ${avatarEl(m.member,44)}
+            <div style="flex:1;min-width:0;overflow:hidden"><div style="font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.member}</div></div>
+            <div style="font-size:18px;font-weight:700;color:var(--amber);flex-shrink:0;white-space:nowrap">${fmtAmt(m.total)}</div>
+          </div>
+          ${m.pas.map(pa=>`<div style="padding:8px 0;border-top:1px solid var(--border2)"><div style="font-size:13px;font-weight:600">${pa.title}</div><div style="font-size:11px;color:var(--text3)">${pa.category} · ${fmtDate(pa.submittedAt)} · Estimated ${fmtAmt(pa.amount)}</div><div style="font-size:11px;color:${pa.status==='converted'?'var(--green)':'var(--amber)'};margin-top:2px">${pa.status==='converted'?'✓ Full expense submitted':'⏳ Awaiting full submission'}</div></div>`).join('')}
+        </div>`).join('')}
+    </div>`;
+}
+
+function switchPayTab(tab, btn) {
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('pay-content-payments').style.display = tab==='payments'?'block':'none';
+  document.getElementById('pay-content-preauth').style.display = tab==='preauth'?'block':'none';
+}
+
+async function markPaid(member) {
+  if(!confirm(`Mark all expenses for ${member} as paid?`)) return;
+  const paidAt = new Date().toISOString();
+  const toUpdate = expenses.filter(e=>e.submitter===member&&e.status==='approved'&&!e.paid&&e.type!=='preauth');
+  try {
+    await Promise.all(toUpdate.map(e=>saveDoc(e.id,{...e,paid:true,paidAt})));
+    toUpdate.forEach(e=>Object.assign(e,{paid:true,paidAt}));
+    showToast(`Marked ${toUpdate.length} expense${toUpdate.length!==1?'s':''} as paid`);
+    renderPage();
+  } catch(e) { alert('Could not save. Please try again.'); }
+}
+
+// ── Reports ───────────────────────────────────────────────────────────────────
+function renderReports() {
+  const now = new Date();
+  const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const TEAM = TEAM_DATA.map(t=>t.name);
+
+  return `
+    <div class="page-header"><h2>Reports</h2><p>Export expense data</p></div>
+    <div class="card" style="max-width:800px">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Team member</label>
+          <select id="r-member"><option value="All">All team members</option>${TEAM.map(t=>`<option value="${t}">${t}</option>`).join('')}</select>
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="r-status"><option value="approved">Approved</option><option value="all">All</option><option value="pending">Pending</option><option value="rejected">Rejected</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>From date</label>
+          <input type="date" id="r-from">
+        </div>
+        <div class="form-group">
+          <label>To date</label>
+          <input type="date" id="r-to" value="${now.toISOString().split('T')[0]}">
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="exportCSV()">📊 Export CSV</button>
+        <button class="btn btn-danger" onclick="exportPDF()">📄 Export PDF (with receipts)</button>
+      </div>
+    </div>
+    <div id="report-preview" style="margin-top:20px"></div>`;
+}
+
+function exportCSV() {
+  const member = document.getElementById('r-member').value;
+  const status = document.getElementById('r-status').value;
+  const from = document.getElementById('r-from').value;
+  const to = document.getElementById('r-to').value;
+
+  let filtered = expenses.filter(e=>e.type!=='preauth');
+  if(member!=='All') filtered = filtered.filter(e=>e.submitter===member);
+  if(status!=='all') filtered = filtered.filter(e=>e.status===status);
+  if(from) filtered = filtered.filter(e=>(e.date||e.submittedAt?.slice(0,10)||'')>=from);
+  if(to) filtered = filtered.filter(e=>(e.date||e.submittedAt?.slice(0,10)||'')<=to);
+
+  if(filtered.length===0) { alert('No expenses match the selected filters.'); return; }
+
+  const headers = ['Date','Submitter','Title','Category','Held With','Client Name','Staff Attendees','Client Attendees','Amount (£)','Status','Description','Review Note'];
+  const rows = filtered.map(e=>[
+    e.date||e.submittedAt?.slice(0,10)||'',
+    e.submitter||'',
+    `"${(e.title||'').replace(/"/g,'""')}"`,
+    e.category||'',
+    e.heldWith||'',
+    `"${(e.clientName||'').replace(/"/g,'""')}"`,
+    `"${(e.staffAttendees||'').replace(/"/g,'""')}"`,
+    `"${(e.clientAttendees||'').replace(/"/g,'""')}"`,
+    (parseFloat(e.amount)||0).toFixed(2),
+    e.status||'',
+    `"${(e.description||'').replace(/"/g,'""')}"`,
+    `"${(e.reviewNote||'').replace(/"/g,'""')}"`,
+  ]);
+
+  const csv = [headers.join(','), ...rows.map(r=>r.join(','))].join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `expensio_report_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+  showToast(`Exported ${filtered.length} expenses`);
+}
+
+function getReportFilters() {
+  const member = document.getElementById('r-member').value;
+  const status = document.getElementById('r-status').value;
+  const from = document.getElementById('r-from').value;
+  const to = document.getElementById('r-to').value;
+
+  let filtered = expenses.filter(e=>e.type!=='preauth');
+  if(member!=='All') filtered = filtered.filter(e=>e.submitter===member);
+  if(status!=='all') filtered = filtered.filter(e=>e.status===status);
+  if(from) filtered = filtered.filter(e=>(e.date||e.submittedAt?.slice(0,10)||'')>=from);
+  if(to) filtered = filtered.filter(e=>(e.date||e.submittedAt?.slice(0,10)||'')<=to);
+  return {filtered, member, status};
+}
+
+function exportPDF() {
+  const {filtered, member, status} = getReportFilters();
+  if(filtered.length===0) { alert('No expenses match the selected filters.'); return; }
+
+  const total = filtered.reduce((s,e)=>s+(parseFloat(e.amount)||0),0);
+  const today = new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+
+  const rowsHtml = filtered.map(e => {
+    const receipts = (e.receipts||[]).filter(r=>r.url||r.uri);
+    const receiptImgs = receipts.length > 0
+      ? receipts.map(r => `<img src="${r.url||r.uri}" style="width:140px;height:140px;object-fit:cover;border-radius:6px;border:1px solid #ddd;margin:2px">`).join('')
+      : '<span style="color:#999;font-size:11px">No receipt attached</span>';
+
+    return `
+      <div style="border:1px solid #ddd;border-radius:10px;padding:16px;margin-bottom:14px;page-break-inside:avoid;background:#fafafa">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+          <div>
+            <div style="font-size:15px;font-weight:700;color:#111">${e.title||''}</div>
+            <div style="font-size:11px;color:#666;margin-top:2px">${e.submitter||''} · ${e.category||''} · ${fmtDate(e.date||e.submittedAt)}</div>
+            ${e.heldWith?`<div style="font-size:11px;color:#555;margin-top:4px">Held with: ${e.heldWith}${e.clientName?' — '+e.clientName:''}</div>`:''}
+            ${e.staffAttendees?`<div style="font-size:11px;color:#555;margin-top:2px">Staff: ${e.staffAttendees}</div>`:''}
+            ${e.clientAttendees?`<div style="font-size:11px;color:#555;margin-top:2px">Clients: ${e.clientAttendees}</div>`:''}
+            ${e.description?`<div style="font-size:11px;color:#555;margin-top:4px;font-style:italic">${e.description}</div>`:''}
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:18px;font-weight:700;color:#111">£${(parseFloat(e.amount)||0).toFixed(2)}</div>
+            <div style="font-size:10px;text-transform:uppercase;font-weight:700;color:${e.status==='approved'?'#059669':e.status==='rejected'?'#dc2626':'#d97706'};margin-top:4px">${e.status||''}</div>
+          </div>
+        </div>
+        ${e.reviewNote?`<div style="font-size:11px;color:#555;background:#f0f0f0;border-radius:6px;padding:8px;margin-bottom:8px">${e.reviewNote}</div>`:''}
+        <div style="margin-top:8px">
+          <div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Receipt${receipts.length!==1?'s':''}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">${receiptImgs}</div>
+        </div>
+      </div>`;
+  }).join('');
+
+  const printWindow = window.open('', '_blank');
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html><head><meta charset="utf-8"><title>Expensio Report</title>
+    <style>
+      body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:30px;max-width:900px}
+      h1{font-size:22px;margin-bottom:2px}
+      .meta{color:#666;font-size:12px;margin-bottom:20px}
+      .summary{display:flex;gap:30px;background:#f0f7ff;border-radius:10px;padding:16px 20px;margin-bottom:24px}
+      .summary-item b{display:block;font-size:22px;color:#111}
+      .summary-item span{font-size:11px;color:#666;text-transform:uppercase;letter-spacing:0.5px}
+      @media print { body{margin:15px} }
+    </style></head>
+    <body>
+      <h1>Expensio — Expense Report</h1>
+      <div class="meta">${member==='All'?'All team members':member} · ${status==='all'?'All statuses':status} · Generated ${today}</div>
+      <div class="summary">
+        <div class="summary-item"><b>${filtered.length}</b><span>Expenses</span></div>
+        <div class="summary-item"><b>£${total.toFixed(2)}</b><span>Total</span></div>
+      </div>
+      ${rowsHtml}
+    </body></html>
+  `);
+  printWindow.document.close();
+  setTimeout(()=>{ printWindow.print(); }, 500);
+  showToast(`Generating PDF with ${filtered.length} expenses`);
+}
+
+// ── Event listeners ───────────────────────────────────────────────────────────
+function attachEventListeners() {
+  const catSel = document.getElementById('f-category');
+  if(catSel) {
+    catSel.addEventListener('change', ()=>{
+      const needsAttendees = catSel.value.includes('Meals')||catSel.value.includes('Entertainment');
+      const sect = document.getElementById('attendees-section');
+      if(sect) sect.style.display = needsAttendees?'block':'none';
+    });
+  }
+}
+
+// ── Mobile Nav ───────────────────────────────────────────────────────────────
+function mobileNav(page) {
+  document.querySelectorAll('.mobile-nav-item').forEach(b=>b.classList.remove('active'));
+  const btn = document.getElementById('mnav-'+page);
+  if(btn) btn.classList.add('active');
+  navigate(page);
+}
+
+function setupMobileNav() {
+  const isApprover = currentRole==='ops' && opsMode==='approve';
+  const isSubmitter = currentRole==='staff' || (currentRole==='ops' && opsMode==='submit');
+  
+  // Show/hide nav items based on role
+  const queueBtn = document.getElementById('mnav-queue');
+  const paymentsBtn = document.getElementById('mnav-payments');
+  const reportsBtn = document.getElementById('mnav-reports');
+  const expensesBtn = document.getElementById('mnav-expenses');
+  const submitBtn = document.getElementById('mnav-submit');
+  const preauthBtn = document.getElementById('mnav-preauth');
+
+  if(queueBtn) queueBtn.style.display = isApprover ? 'flex' : 'none';
+  if(paymentsBtn) paymentsBtn.style.display = isApprover ? 'flex' : 'none';
+  if(reportsBtn) reportsBtn.style.display = isApprover ? 'flex' : 'none';
+  if(expensesBtn) expensesBtn.style.display = isSubmitter ? 'flex' : 'none';
+  if(submitBtn) submitBtn.style.display = isSubmitter ? 'flex' : 'none';
+  if(preauthBtn) preauthBtn.style.display = isSubmitter ? 'flex' : 'none';
+
+  // Set active
+  const activePage = isApprover ? 'queue' : 'expenses';
+  document.querySelectorAll('.mobile-nav-item').forEach(b=>b.classList.remove('active'));
+  const activeBtn = document.getElementById('mnav-'+activePage);
+  if(activeBtn) activeBtn.classList.add('active');
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
 initLogin();
 </script>
 </body>
