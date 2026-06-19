@@ -218,11 +218,31 @@
 
   /* ── Mobile ── */
   @media (max-width: 768px) {
-    #sidebar { width: 100%; min-height: auto; position: relative; }
-    #content { margin-left: 0; padding: 16px; }
+    #sidebar { display: none; }
+    #content { margin-left: 0; padding: 16px 12px 90px; }
     #main { flex-direction: column; }
     .stats-row { grid-template-columns: 1fr 1fr; }
     .form-row { grid-template-columns: 1fr; }
+    .page-header h2 { font-size: 20px; }
+    
+    /* Bottom nav for mobile */
+    #mobile-nav {
+      display: flex !important;
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--bg2); border-top: 1px solid var(--border);
+      padding: 8px 0 20px; z-index: 200;
+    }
+    .mobile-nav-item {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      gap: 3px; cursor: pointer; padding: 4px 0;
+      font-size: 10px; color: var(--text3); border: none; background: none;
+      font-family: inherit;
+    }
+    .mobile-nav-item.active { color: var(--teal); }
+    .mobile-nav-item .m-icon { font-size: 20px; }
+  }
+  @media (min-width: 769px) {
+    #mobile-nav { display: none !important; }
   }
 
   /* ── Receipt thumb ── */
@@ -293,6 +313,28 @@
   <div id="content">
     <div id="page-content"></div>
   </div>
+</div>
+
+<!-- Mobile bottom nav -->
+<div id="mobile-nav" style="display:none">
+  <button class="mobile-nav-item active" id="mnav-expenses" onclick="mobileNav('expenses')">
+    <span class="m-icon">🧾</span>Expenses
+  </button>
+  <button class="mobile-nav-item" id="mnav-submit" onclick="mobileNav('submit')">
+    <span class="m-icon">➕</span>Submit
+  </button>
+  <button class="mobile-nav-item" id="mnav-preauth" onclick="mobileNav('preauth')">
+    <span class="m-icon">🔐</span>Pre-Auth
+  </button>
+  <button class="mobile-nav-item" id="mnav-queue" onclick="mobileNav('queue')" style="display:none" id="mnav-queue">
+    <span class="m-icon">🛡</span>Queue
+  </button>
+  <button class="mobile-nav-item" id="mnav-payments" onclick="mobileNav('payments')" style="display:none">
+    <span class="m-icon">💳</span>Payments
+  </button>
+  <button class="mobile-nav-item" id="mnav-reports" onclick="mobileNav('reports')" style="display:none">
+    <span class="m-icon">📊</span>Reports
+  </button>
 </div>
 
 </div>
@@ -513,6 +555,7 @@ function startApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('main-app').style.display = 'flex';
   setupSidebar();
+  setupMobileNav();
   currentPage = currentRole==='ops' && opsMode==='approve' ? 'queue' : 'expenses';
   refreshData().then(()=>renderPage());
 }
@@ -1204,6 +1247,7 @@ function renderReports() {
         </div>
       </div>
       <button class="btn btn-primary" onclick="exportCSV()">📊 Export CSV</button>
+      <button class="btn btn-danger" onclick="exportPDF()" style="margin-left:8px">📄 Export PDF (with receipts)</button>
     </div>
     <div id="report-preview" style="margin-top:20px"></div>`;
 }
@@ -1247,6 +1291,85 @@ function exportCSV() {
   showToast(`Exported ${filtered.length} expenses`);
 }
 
+function getReportFilters() {
+  const member = document.getElementById('r-member').value;
+  const status = document.getElementById('r-status').value;
+  const from = document.getElementById('r-from').value;
+  const to = document.getElementById('r-to').value;
+
+  let filtered = expenses.filter(e=>e.type!=='preauth');
+  if(member!=='All') filtered = filtered.filter(e=>e.submitter===member);
+  if(status!=='all') filtered = filtered.filter(e=>e.status===status);
+  if(from) filtered = filtered.filter(e=>(e.date||e.submittedAt?.slice(0,10)||'')>=from);
+  if(to) filtered = filtered.filter(e=>(e.date||e.submittedAt?.slice(0,10)||'')<=to);
+  return {filtered, member, status};
+}
+
+function exportPDF() {
+  const {filtered, member, status} = getReportFilters();
+  if(filtered.length===0) { alert('No expenses match the selected filters.'); return; }
+
+  const total = filtered.reduce((s,e)=>s+(parseFloat(e.amount)||0),0);
+  const today = new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+
+  const rowsHtml = filtered.map(e => {
+    const receipts = (e.receipts||[]).filter(r=>r.url||r.uri);
+    const receiptImgs = receipts.length > 0
+      ? receipts.map(r => `<img src="${r.url||r.uri}" style="width:140px;height:140px;object-fit:cover;border-radius:6px;border:1px solid #ddd;margin:2px">`).join('')
+      : '<span style="color:#999;font-size:11px">No receipt attached</span>';
+
+    return `
+      <div style="border:1px solid #ddd;border-radius:10px;padding:16px;margin-bottom:14px;page-break-inside:avoid;background:#fafafa">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+          <div>
+            <div style="font-size:15px;font-weight:700;color:#111">${e.title||''}</div>
+            <div style="font-size:11px;color:#666;margin-top:2px">${e.submitter||''} · ${e.category||''} · ${fmtDate(e.date||e.submittedAt)}</div>
+            ${e.heldWith?`<div style="font-size:11px;color:#555;margin-top:4px">Held with: ${e.heldWith}${e.clientName?' — '+e.clientName:''}</div>`:''}
+            ${e.staffAttendees?`<div style="font-size:11px;color:#555;margin-top:2px">Staff: ${e.staffAttendees}</div>`:''}
+            ${e.clientAttendees?`<div style="font-size:11px;color:#555;margin-top:2px">Clients: ${e.clientAttendees}</div>`:''}
+            ${e.description?`<div style="font-size:11px;color:#555;margin-top:4px;font-style:italic">${e.description}</div>`:''}
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:18px;font-weight:700;color:#111">£${(parseFloat(e.amount)||0).toFixed(2)}</div>
+            <div style="font-size:10px;text-transform:uppercase;font-weight:700;color:${e.status==='approved'?'#059669':e.status==='rejected'?'#dc2626':'#d97706'};margin-top:4px">${e.status||''}</div>
+          </div>
+        </div>
+        ${e.reviewNote?`<div style="font-size:11px;color:#555;background:#f0f0f0;border-radius:6px;padding:8px;margin-bottom:8px">${e.reviewNote}</div>`:''}
+        <div style="margin-top:8px">
+          <div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Receipt${receipts.length!==1?'s':''}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">${receiptImgs}</div>
+        </div>
+      </div>`;
+  }).join('');
+
+  const printWindow = window.open('', '_blank');
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html><head><meta charset="utf-8"><title>Expensio Report</title>
+    <style>
+      body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:30px;max-width:900px}
+      h1{font-size:22px;margin-bottom:2px}
+      .meta{color:#666;font-size:12px;margin-bottom:20px}
+      .summary{display:flex;gap:30px;background:#f0f7ff;border-radius:10px;padding:16px 20px;margin-bottom:24px}
+      .summary-item b{display:block;font-size:22px;color:#111}
+      .summary-item span{font-size:11px;color:#666;text-transform:uppercase;letter-spacing:0.5px}
+      @media print { body{margin:15px} }
+    </style></head>
+    <body>
+      <h1>Expensio — Expense Report</h1>
+      <div class="meta">${member==='All'?'All team members':member} · ${status==='all'?'All statuses':status} · Generated ${today}</div>
+      <div class="summary">
+        <div class="summary-item"><b>${filtered.length}</b><span>Expenses</span></div>
+        <div class="summary-item"><b>£${total.toFixed(2)}</b><span>Total</span></div>
+      </div>
+      ${rowsHtml}
+    </body></html>
+  `);
+  printWindow.document.close();
+  setTimeout(()=>{ printWindow.print(); }, 500);
+  showToast(`Generating PDF with ${filtered.length} expenses`);
+}
+
 // ── Event listeners ───────────────────────────────────────────────────────────
 function attachEventListeners() {
   const catSel = document.getElementById('f-category');
@@ -1257,6 +1380,40 @@ function attachEventListeners() {
       if(sect) sect.style.display = needsAttendees?'block':'none';
     });
   }
+}
+
+// ── Mobile Nav ───────────────────────────────────────────────────────────────
+function mobileNav(page) {
+  document.querySelectorAll('.mobile-nav-item').forEach(b=>b.classList.remove('active'));
+  const btn = document.getElementById('mnav-'+page);
+  if(btn) btn.classList.add('active');
+  navigate(page);
+}
+
+function setupMobileNav() {
+  const isApprover = currentRole==='ops' && opsMode==='approve';
+  const isSubmitter = currentRole==='staff' || (currentRole==='ops' && opsMode==='submit');
+  
+  // Show/hide nav items based on role
+  const queueBtn = document.getElementById('mnav-queue');
+  const paymentsBtn = document.getElementById('mnav-payments');
+  const reportsBtn = document.getElementById('mnav-reports');
+  const expensesBtn = document.getElementById('mnav-expenses');
+  const submitBtn = document.getElementById('mnav-submit');
+  const preauthBtn = document.getElementById('mnav-preauth');
+
+  if(queueBtn) queueBtn.style.display = isApprover ? 'flex' : 'none';
+  if(paymentsBtn) paymentsBtn.style.display = isApprover ? 'flex' : 'none';
+  if(reportsBtn) reportsBtn.style.display = isApprover ? 'flex' : 'none';
+  if(expensesBtn) expensesBtn.style.display = isSubmitter ? 'flex' : 'none';
+  if(submitBtn) submitBtn.style.display = isSubmitter ? 'flex' : 'none';
+  if(preauthBtn) preauthBtn.style.display = isSubmitter ? 'flex' : 'none';
+
+  // Set active
+  const activePage = isApprover ? 'queue' : 'expenses';
+  document.querySelectorAll('.mobile-nav-item').forEach(b=>b.classList.remove('active'));
+  const activeBtn = document.getElementById('mnav-'+activePage);
+  if(activeBtn) activeBtn.classList.add('active');
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
