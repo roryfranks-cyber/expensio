@@ -432,7 +432,8 @@ function initLogin() {
   sel.innerHTML = '<option value="">Choose your name…</option>';
   TEAM_DATA.forEach(u => {
     const o = document.createElement('option');
-    o.value = u.name; o.textContent = u.name;
+    o.value = u.name;
+    o.textContent = u.name;
     sel.appendChild(o);
   });
   sel.addEventListener('change', ()=>{
