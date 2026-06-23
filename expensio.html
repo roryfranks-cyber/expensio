@@ -528,11 +528,32 @@ async function saveDoc(id, data) {
   if(!res.ok) throw new Error('Save failed');
 }
 async function createDoc(id, data) {
-  const res = await fetch(`${FB_BASE}/expenses?documentId=${id}`, {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify(toFields(data))
-  });
-  if(!res.ok) throw new Error('Create failed');
+  try {
+    console.log('Attempting to create document:', id);
+    const payload = toFields(data);
+    console.log('Payload:', payload);
+
+    const res = await fetch(`${FB_BASE}/expenses?documentId=${id}`, {
+      method:'POST', 
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+
+    const responseText = await res.text();
+    console.log('Response status:', res.status);
+    console.log('Response body:', responseText);
+
+    if(!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${responseText}`);
+    }
+
+    console.log('✅ Document created successfully:', id);
+    return true;
+  } catch(e) {
+    console.error('❌ createDoc failed for', id, e);
+    alert('Submit failed: ' + e.message);
+    throw e;
+  }
 }
 async function deleteDoc(id) {
   await fetch(`${FB_BASE}/expenses/${id}`, {method:'DELETE'});
