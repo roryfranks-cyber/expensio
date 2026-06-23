@@ -528,30 +528,23 @@ async function saveDoc(id, data) {
   if(!res.ok) throw new Error('Save failed');
 }
 async function createDoc(id, data) {
+  alert("Trying to save expense: " + id); // This will pop up a message
   try {
-    console.log('Attempting to create document:', id);
-    const payload = toFields(data);
-    console.log('Payload:', payload);
-
     const res = await fetch(`${FB_BASE}/expenses?documentId=${id}`, {
       method:'POST', 
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(payload)
+      body: JSON.stringify(toFields(data))
     });
 
-    const responseText = await res.text();
-    console.log('Response status:', res.status);
-    console.log('Response body:', responseText);
-
     if(!res.ok) {
-      throw new Error(`HTTP ${res.status}: ${responseText}`);
+      alert("Save failed with error: " + res.status);
+      throw new Error('Create failed');
     }
 
-    console.log('✅ Document created successfully:', id);
+    alert("✅ Expense saved to cloud successfully!");
     return true;
   } catch(e) {
-    console.error('❌ createDoc failed for', id, e);
-    alert('Submit failed: ' + e.message);
+    alert("❌ Save failed: " + e.message);
     throw e;
   }
 }
