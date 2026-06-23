@@ -1005,7 +1005,8 @@ async function submitExpense() {
       paid: false, paidAt: null, receipts,
       autoApproveAt: (!isPreAuth && amt < 10) ? new Date(Date.now()+15*60*1000).toISOString() : null,
     };
-    await createDoc(id, doc);
+  await createDoc(id, doc);
+alert("Just tried to save to cloud. Check if it appears after refresh.");
     expenses.unshift(doc);
     isPreAuth = false;
     showToast(isPreAuth ? 'Pre-auth request submitted' : 'Expense submitted successfully');
