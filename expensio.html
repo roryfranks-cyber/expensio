@@ -432,13 +432,29 @@ function normaliseExpense(e) {
 }
 
 async function loadExpenses() {
-  const res = await fetch(`${FB_BASE}/expenses?pageSize=500`);
-  const json = await res.json();
-  if(!res.ok) {
-    throw new Error(`Failed to load expenses (${res.status}): ${(json && json.error && json.error.message) || 'unknown error'}`);
-  }
-  if(!json.documents) return [];
-  return json.documents.map(fromDoc).map(normaliseExpense).sort((a,b)=>new Date(b.submittedAt)-new Date(a.submittedAt));
+  // Firestore's listDocuments endpoint silently paginates — it can return far
+  // fewer documents than the requested pageSize and hand back a
+  // nextPageToken for the rest, regardless of how high pageSize is set. Not
+  // following that token means only the oldest page of documents is ever
+  // seen, and anything created after that page fills up (i.e. every new
+  // submission, eventually) becomes permanently invisible to this app even
+  // though it's sitting safely in Firestore. This loop keeps requesting
+  // pages until Firestore stops returning a token.
+  let allDocs = [];
+  let pageToken = null;
+  let guard = 0;
+  do {
+    const url = `${FB_BASE}/expenses?pageSize=300${pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ''}`;
+    const res = await fetch(url);
+    const json = await res.json();
+    if(!res.ok) {
+      throw new Error(`Failed to load expenses (${res.status}): ${(json && json.error && json.error.message) || 'unknown error'}`);
+    }
+    if(json.documents) allDocs = allDocs.concat(json.documents);
+    pageToken = json.nextPageToken || null;
+    guard++;
+  } while(pageToken && guard < 25); // guard rail: stop after 25 pages (thousands of docs) to avoid an infinite loop if Firestore ever returns a token forever
+  return allDocs.map(fromDoc).map(normaliseExpense).sort((a,b)=>new Date(b.submittedAt)-new Date(a.submittedAt));
 }
 async function saveDoc(id, data) {
   const res = await fetch(`${FB_BASE}/expenses/${id}`, {
