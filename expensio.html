@@ -389,6 +389,7 @@ function fromVal(v) {
   if(v.booleanValue !== undefined) return v.booleanValue;
   if(v.doubleValue !== undefined) return v.doubleValue;
   if(v.integerValue !== undefined) return Number(v.integerValue);
+  if(v.timestampValue !== undefined) return v.timestampValue; // ISO string already
   if(v.nullValue !== undefined) return null;
   if(v.arrayValue !== undefined) return (v.arrayValue.values||[]).map(fromVal);
   if(v.mapValue !== undefined) { const o={}; for(const[k,v2] of Object.entries(v.mapValue.fields||{})) o[k]=fromVal(v2); return o; }
@@ -415,11 +416,26 @@ function toFields(obj) {
   return {fields:f};
 }
 
+// Older app versions, manual Firebase Console edits, or partially-written
+// documents can have a status/type that's missing or doesn't exactly match
+// the lowercase strings this app filters on ('pending', 'expense', etc).
+// Without normalisation those documents are silently excluded from every
+// screen with no error — they're real, visible in Firebase, just invisible
+// here. This makes the matching tolerant instead of brittle.
+function normaliseExpense(e) {
+  if(e.type) e.type = String(e.type).trim().toLowerCase();
+  if(!e.type) e.type = 'expense'; // anything without an explicit type is a normal expense, not a pre-auth
+  if(e.status) e.status = String(e.status).trim().toLowerCase();
+  if(!e.status) e.status = 'pending'; // a document with no status at all should still surface somewhere, not vanish
+  if(e.amount !== undefined && e.amount !== null) e.amount = parseFloat(e.amount) || 0;
+  return e;
+}
+
 async function loadExpenses() {
   const res = await fetch(`${FB_BASE}/expenses?pageSize=500`);
   const json = await res.json();
   if(!json.documents) return [];
-  return json.documents.map(fromDoc).sort((a,b)=>new Date(b.submittedAt)-new Date(a.submittedAt));
+  return json.documents.map(fromDoc).map(normaliseExpense).sort((a,b)=>new Date(b.submittedAt)-new Date(a.submittedAt));
 }
 async function saveDoc(id, data) {
   const res = await fetch(`${FB_BASE}/expenses/${id}`, {
