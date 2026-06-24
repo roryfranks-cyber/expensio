@@ -405,7 +405,7 @@
   <button class="mobile-nav-item" id="mnav-preauth" onclick="mobileNav('preauth')">
     <span class="m-icon">🔐</span>Pre-Auth
   </button>
-  <button class="mobile-nav-item" id="mnav-queue" onclick="mobileNav('queue')" style="display:none" id="mnav-queue">
+  <button class="mobile-nav-item" id="mnav-queue" onclick="mobileNav('queue')" style="display:none">
     <span class="m-icon">🛡</span>Queue
   </button>
   <button class="mobile-nav-item" id="mnav-payments" onclick="mobileNav('payments')" style="display:none">
@@ -433,6 +433,7 @@
 // ── Config ────────────────────────────────────────────────────────────────────
 const FB_PROJECT = 'expensio-ac443';
 const FB_BASE = `https://firestore.googleapis.com/v1/projects/${FB_PROJECT}/databases/(default)/documents`;
+const FB_STORAGE = `https://firebasestorage.googleapis.com/v0/b/${FB_PROJECT}.firebasestorage.app/o`;
 
 // ── Team Data ──────────────────────────────────────────────────────────────────
 const TEAM_DATA = [
@@ -525,31 +526,47 @@ async function saveDoc(id, data) {
     method:'PATCH', headers:{'Content-Type':'application/json'},
     body: JSON.stringify(toFields(data))
   });
-  if(!res.ok) throw new Error('Save failed');
+  if(!res.ok) {
+    const errText = await res.text().catch(()=> '');
+    throw new Error(`Save failed (${res.status}): ${errText.slice(0,200)}`);
+  }
 }
 async function createDoc(id, data) {
-  alert("Trying to save expense: " + id); // This will pop up a message
-  try {
-    const res = await fetch(`${FB_BASE}/expenses?documentId=${id}`, {
-      method:'POST', 
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(toFields(data))
-    });
-
-    if(!res.ok) {
-      alert("Save failed with error: " + res.status);
-      throw new Error('Create failed');
-    }
-
-    alert("✅ Expense saved to cloud successfully!");
-    return true;
-  } catch(e) {
-    alert("❌ Save failed: " + e.message);
-    throw e;
+  const res = await fetch(`${FB_BASE}/expenses?documentId=${id}`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(toFields(data))
+  });
+  if(!res.ok) {
+    const errText = await res.text().catch(()=> '');
+    throw new Error(`Create failed (${res.status}): ${errText.slice(0,200)}`);
   }
+  return true;
 }
 async function deleteDoc(id) {
   await fetch(`${FB_BASE}/expenses/${id}`, {method:'DELETE'});
+}
+
+// Upload a receipt to Firebase Storage and return its public download URL.
+// Receipts must NOT be stored as base64 data URLs inside Firestore documents —
+// Firestore has a hard 1MB-per-document limit and a single phone photo easily
+// exceeds that, causing every save with a real receipt attached to fail.
+async function uploadReceiptToStorage(expenseId, index, file) {
+  const safeName = (file.name || `receipt_${index}.jpg`).replace(/[^a-zA-Z0-9_.-]/g, '_');
+  const path = `receipts/${expenseId}_${index}_${safeName}`;
+  const encodedPath = encodeURIComponent(path);
+  const uploadRes = await fetch(`${FB_STORAGE}?uploadType=media&name=${encodedPath}`, {
+    method: 'POST',
+    headers: { 'Content-Type': file.type || 'image/jpeg' },
+    body: file,
+  });
+  if (!uploadRes.ok) {
+    const errText = await uploadRes.text().catch(()=> '');
+    throw new Error(`Receipt upload failed (${uploadRes.status}): ${errText.slice(0,200)}`);
+  }
+  const data = await uploadRes.json();
+  const token = data.downloadTokens;
+  return `${FB_STORAGE}/${encodedPath}?alt=media${token ? `&token=${token}` : ''}`;
 }
 
 // ── Utils ─────────────────────────────────────────────────────────────────────
@@ -827,7 +844,12 @@ function expenseCardHtml(e) {
         </div>
         <div class="expense-amount">${fmtAmt(e.amount)}</div>
       </div>
-      ${receipts.length>0?`<div class="receipt-thumbs">${receipts.map(r=>`<img class="receipt-thumb" src="${r.url||r.uri}" onclick="openImgModal('${r.url||r.uri}')" alt="Receipt">`).join('')}</div>`:''}
+      ${receipts.length>0?`<div class="receipt-thumbs">${receipts.map(r=>{
+        const uri = r.url||r.uri;
+        return r.uploaded===false
+          ? `<div class="receipt-thumb" style="display:flex;align-items:center;justify-content:center;background:var(--bg2)"><span style="font-size:10px;color:var(--text3)">Uploading…</span></div>`
+          : `<img class="receipt-thumb" src="${uri}" onclick="openImgModal('${uri}')" alt="Receipt">`;
+      }).join('')}</div>`:''}
       <div class="expense-footer">
         ${pillHtml(e.status)}
         ${e.status==='pending'?`<div style="display:flex;gap:8px">
@@ -971,6 +993,7 @@ async function submitExpense() {
   const date = document.getElementById('f-date').value;
   const staff = document.getElementById('f-staff')?.value?.trim()||'';
   const clients = document.getElementById('f-clients')?.value?.trim()||'';
+  const wasPreAuth = isPreAuth;
 
   if(!title) { alert('Please enter a title.'); return; }
   if(!amount||parseFloat(amount)<=0) { alert('Please enter a valid amount.'); return; }
@@ -979,15 +1002,10 @@ async function submitExpense() {
   const needsClient = ['Client','Prospect','Third Party'].includes(heldWith);
   if(needsClient && !clientName) { alert('Please enter the client/prospect name.'); return; }
 
-  const receipts = [];
-  if(!isPreAuth) {
-    const files = document.getElementById('f-receipt').files;
+  let files = [];
+  if(!wasPreAuth) {
+    files = Array.from(document.getElementById('f-receipt').files);
     if(files.length === 0) { alert('Please attach a receipt photo.'); return; }
-    // Store as data URLs for web version
-    for(const f of files) {
-      const dataUrl = await new Promise(res=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.readAsDataURL(f); });
-      receipts.push({ uri: dataUrl, name: f.name, url: null, uploaded: false });
-    }
   }
 
   const btn = document.getElementById('submit-btn');
@@ -995,28 +1013,57 @@ async function submitExpense() {
 
   try {
     const now = new Date().toISOString();
-    const id = (isPreAuth?'preauth_':'') + Date.now().toString();
+    const id = (wasPreAuth?'preauth_':'') + Date.now().toString();
     const amt = parseFloat(amount);
+
+    // Save the document immediately with placeholder receipts (no photo data
+    // in Firestore — only small metadata) so the submission never blocks on
+    // upload speed, then upload each photo to Storage in the background.
+    const placeholderReceipts = files.map((f,i)=>({ name: f.name || `receipt_${i}.jpg`, url: null, uploaded: false }));
+
     const doc = {
       id, title, amount: amt, category, date, description: desc,
       heldWith, clientName, staffAttendees: staff, clientAttendees: clients,
-      submitter: currentUser, type: isPreAuth ? 'preauth' : 'expense',
+      submitter: currentUser, type: wasPreAuth ? 'preauth' : 'expense',
       status: 'pending', submittedAt: now, reviewNote: null, reviewedAt: null,
-      paid: false, paidAt: null, receipts,
-      autoApproveAt: (!isPreAuth && amt < 10) ? new Date(Date.now()+15*60*1000).toISOString() : null,
+      paid: false, paidAt: null, receipts: placeholderReceipts,
+      autoApproveAt: (!wasPreAuth && amt < 10) ? new Date(Date.now()+15*60*1000).toISOString() : null,
     };
-  await createDoc(id, doc);
-alert("Just tried to save to cloud. Check if it appears after refresh.");
+
+    await createDoc(id, doc);
     expenses.unshift(doc);
     isPreAuth = false;
-    showToast(isPreAuth ? 'Pre-auth request submitted' : 'Expense submitted successfully');
+    showToast(wasPreAuth ? 'Pre-auth request submitted' : 'Expense submitted successfully');
     currentPage = 'expenses';
     renderNav();
     renderPage();
+
+    // Background upload — failures here don't block the submission, but do
+    // get reflected back onto the saved document once each upload finishes.
+    if(files.length > 0) {
+      const uploaded = await Promise.all(files.map(async (f, i) => {
+        try {
+          const url = await uploadReceiptToStorage(id, i, f);
+          return { name: f.name, url, uploaded: true };
+        } catch(err) {
+          console.error('Receipt upload failed:', err);
+          return { name: f.name, url: null, uploaded: false };
+        }
+      }));
+      try {
+        await saveDoc(id, { ...doc, receipts: uploaded });
+        const liveDoc = expenses.find(e=>e.id===id);
+        if(liveDoc) liveDoc.receipts = uploaded;
+        if(currentPage === 'expenses') renderPage();
+      } catch(err) {
+        console.error('Could not save uploaded receipt URLs:', err);
+      }
+    }
   } catch(e) {
-    alert('Submission failed. Please try again.');
+    console.error(e);
+    alert('Submission failed: ' + (e.message || 'Please try again.'));
     btn.disabled = false;
-    btn.textContent = isPreAuth ? 'Request pre-authorisation' : 'Submit for approval';
+    btn.textContent = wasPreAuth ? 'Request pre-authorisation' : 'Submit for approval';
   }
 }
 
@@ -1029,7 +1076,7 @@ function renderMyPreAuths() {
     preAuths.map(pa=>`
       <div class="expense-card">
         <div class="expense-header">
-          <div>
+          <div style="min-width:0;overflow:hidden">
             <div class="expense-title">${pa.title||''}</div>
             <div class="expense-meta">${pa.category||''} · submitted ${fmtDate(pa.submittedAt)}</div>
             ${pa.heldWith?`<div class="expense-detail">📋 ${pa.heldWith}${pa.clientName?' — '+pa.clientName:''}</div>`:''}
@@ -1064,26 +1111,21 @@ function showConvertForm(id) {
 async function convertPreAuth(preAuthId, title, category, heldWith, clientName) {
   const amount = parseFloat(document.getElementById(`convert-amount-${preAuthId}`).value);
   const notes = document.getElementById(`convert-notes-${preAuthId}`).value;
-  const files = document.getElementById(`convert-receipt-${preAuthId}`).files;
+  const files = Array.from(document.getElementById(`convert-receipt-${preAuthId}`).files);
   if(!amount||amount<=0) { alert('Please enter the final amount.'); return; }
   if(files.length===0) { alert('Please attach a receipt.'); return; }
-
-  const receipts = [];
-  for(const f of files) {
-    const dataUrl = await new Promise(res=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.readAsDataURL(f); });
-    receipts.push({ uri: dataUrl, name: f.name, url: null, uploaded: false });
-  }
 
   try {
     const now = new Date().toISOString();
     const id = Date.now().toString();
+    const placeholderReceipts = files.map((f,i)=>({ name: f.name || `receipt_${i}.jpg`, url: null, uploaded: false }));
     const newExp = {
       id, title, amount, category, heldWith, clientName,
       date: now.split('T')[0], description: notes,
       submitter: currentUser, type: 'expense',
       status: 'pending', submittedAt: now,
       reviewNote: null, reviewedAt: null,
-      paid: false, paidAt: null, receipts,
+      paid: false, paidAt: null, receipts: placeholderReceipts,
       preAuthRef: preAuthId,
     };
     await createDoc(id, newExp);
@@ -1097,7 +1139,29 @@ async function convertPreAuth(preAuthId, title, category, heldWith, clientName) 
     expenses.unshift(newExp);
     showToast('Expense submitted for approval');
     renderPage();
-  } catch(e) { alert('Submission failed. Please try again.'); }
+
+    // Background upload, same as submitExpense
+    const uploaded = await Promise.all(files.map(async (f, i) => {
+      try {
+        const url = await uploadReceiptToStorage(id, i, f);
+        return { name: f.name, url, uploaded: true };
+      } catch(err) {
+        console.error('Receipt upload failed:', err);
+        return { name: f.name, url: null, uploaded: false };
+      }
+    }));
+    try {
+      await saveDoc(id, { ...newExp, receipts: uploaded });
+      const liveDoc = expenses.find(e=>e.id===id);
+      if(liveDoc) liveDoc.receipts = uploaded;
+      if(currentPage === 'expenses') renderPage();
+    } catch(err) {
+      console.error('Could not save uploaded receipt URLs:', err);
+    }
+  } catch(e) {
+    console.error(e);
+    alert('Submission failed: ' + (e.message || 'Please try again.'));
+  }
 }
 
 // ── Ops Queue ─────────────────────────────────────────────────────────────────
@@ -1156,7 +1220,7 @@ function renderQueueItems(items) {
 function opsCardHtml(e) {
   const isSelf = e.submitter===currentUser;
   const canReview = e.status==='pending' && !isSelf;
-  const receipts = (e.receipts||[]).filter(r=>r.url||r.uri);
+  const receipts = (e.receipts||[]).filter(r=>r.url||r.uri||r.uploaded===false);
   return `
     <div class="expense-card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px">
@@ -1175,7 +1239,12 @@ function opsCardHtml(e) {
       ${e.staffAttendees?`<div class="expense-detail">👥 Staff: ${e.staffAttendees}</div>`:''}
       ${e.clientAttendees?`<div class="expense-detail">🤝 Clients: ${e.clientAttendees}</div>`:''}
       ${e.description?`<div class="expense-detail" style="margin-top:6px">${e.description}</div>`:''}
-      ${receipts.length>0?`<div class="receipt-thumbs">${receipts.map(r=>`<img class="receipt-thumb" src="${r.url||r.uri}" onclick="openImgModal('${r.url||r.uri}')" alt="Receipt">`).join('')}</div>`:'<div style="font-size:12px;color:var(--amber);margin-top:8px">⚠️ No receipt attached</div>'}
+      ${receipts.length>0?`<div class="receipt-thumbs">${receipts.map(r=>{
+        const uri = r.url||r.uri;
+        return uri
+          ? `<img class="receipt-thumb" src="${uri}" onclick="openImgModal('${uri}')" alt="Receipt">`
+          : `<div class="receipt-thumb" style="display:flex;align-items:center;justify-content:center;background:var(--bg2)"><span style="font-size:9px;color:var(--text3);text-align:center">Uploading…</span></div>`;
+      }).join('')}</div>`:'<div style="font-size:12px;color:var(--amber);margin-top:8px">⚠️ No receipt attached</div>'}
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">${pillHtml(e.status)}${e.reviewedAt?`<span style="font-size:11px;color:var(--text3)">Reviewed ${fmtDate(e.reviewedAt)}</span>`:''}</div>
       ${e.reviewNote?`<div class="note-box">${e.reviewNote}</div>`:''}
       ${isSelf&&e.status==='pending'?`<div style="margin-top:10px;display:flex;align-items:center;gap:8px"><span>🔒</span><span style="font-size:13px;color:var(--amber)">You cannot approve your own expense.</span></div>`:''}
@@ -1219,7 +1288,7 @@ async function reviewItem(id, status, noteId, requireNote=false) {
     Object.assign(expense, updated);
     showToast(status==='approved'?'Approved':'Rejected');
     renderPage();
-  } catch(e) { alert('Could not save. Please try again.'); }
+  } catch(e) { alert('Could not save: ' + (e.message || 'Please try again.')); }
 }
 
 async function reviewExpense(id, status) {
@@ -1242,7 +1311,7 @@ async function reviewExpense(id, status) {
     Object.assign(expense, updated);
     showToast(status==='approved'?'Approved':'Rejected');
     renderPage();
-  } catch(e) { alert('Could not save. Please try again.'); }
+  } catch(e) { alert('Could not save: ' + (e.message || 'Please try again.')); }
 }
 
 // ── Payments ──────────────────────────────────────────────────────────────────
@@ -1294,8 +1363,8 @@ function renderPayments() {
     </div>
 
     <div id="pay-content-preauth" style="display:none">
-      <div class="stat-card" style="margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;border-color:var(--amber)">
-        <div><div style="font-size:12px;color:var(--amber);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Pre-approved total</div>
+      <div class="stat-card" style="margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;border-color:var(--amber);gap:12px">
+        <div style="min-width:0"><div style="font-size:12px;color:var(--amber);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Pre-approved total</div>
         <div style="font-size:32px;font-weight:700;color:var(--amber)">£${preAuthSummary.reduce((s,m)=>s+m.total,0).toFixed(2)}</div>
         <div style="font-size:13px;color:var(--text2);margin-top:4px">${preAuthSummary.length} member${preAuthSummary.length!==1?'s':''} with open pre-auths</div></div>
         <div style="font-size:32px;flex-shrink:0">🔐</div>
@@ -1329,7 +1398,7 @@ async function markPaid(member) {
     toUpdate.forEach(e=>Object.assign(e,{paid:true,paidAt}));
     showToast(`Marked ${toUpdate.length} expense${toUpdate.length!==1?'s':''} as paid`);
     renderPage();
-  } catch(e) { alert('Could not save. Please try again.'); }
+  } catch(e) { alert('Could not save: ' + (e.message || 'Please try again.')); }
 }
 
 // ── Reports ───────────────────────────────────────────────────────────────────
@@ -1369,7 +1438,7 @@ function renderReports() {
     <div id="report-preview" style="margin-top:20px"></div>`;
 }
 
-function exportCSV() {
+function getReportFilters() {
   const member = document.getElementById('r-member').value;
   const status = document.getElementById('r-status').value;
   const from = document.getElementById('r-from').value;
@@ -1380,7 +1449,11 @@ function exportCSV() {
   if(status!=='all') filtered = filtered.filter(e=>e.status===status);
   if(from) filtered = filtered.filter(e=>(e.date||e.submittedAt?.slice(0,10)||'')>=from);
   if(to) filtered = filtered.filter(e=>(e.date||e.submittedAt?.slice(0,10)||'')<=to);
+  return {filtered, member, status};
+}
 
+function exportCSV() {
+  const {filtered} = getReportFilters();
   if(filtered.length===0) { alert('No expenses match the selected filters.'); return; }
 
   const headers = ['Date','Submitter','Title','Category','Held With','Client Name','Staff Attendees','Client Attendees','Amount (£)','Status','Description','Review Note'];
@@ -1406,20 +1479,6 @@ function exportCSV() {
   a.href = url; a.download = `expensio_report_${new Date().toISOString().slice(0,10)}.csv`;
   a.click(); URL.revokeObjectURL(url);
   showToast(`Exported ${filtered.length} expenses`);
-}
-
-function getReportFilters() {
-  const member = document.getElementById('r-member').value;
-  const status = document.getElementById('r-status').value;
-  const from = document.getElementById('r-from').value;
-  const to = document.getElementById('r-to').value;
-
-  let filtered = expenses.filter(e=>e.type!=='preauth');
-  if(member!=='All') filtered = filtered.filter(e=>e.submitter===member);
-  if(status!=='all') filtered = filtered.filter(e=>e.status===status);
-  if(from) filtered = filtered.filter(e=>(e.date||e.submittedAt?.slice(0,10)||'')>=from);
-  if(to) filtered = filtered.filter(e=>(e.date||e.submittedAt?.slice(0,10)||'')<=to);
-  return {filtered, member, status};
 }
 
 function exportPDF() {
@@ -1510,8 +1569,7 @@ function mobileNav(page) {
 function setupMobileNav() {
   const isApprover = currentRole==='ops' && opsMode==='approve';
   const isSubmitter = currentRole==='staff' || (currentRole==='ops' && opsMode==='submit');
-  
-  // Show/hide nav items based on role
+
   const queueBtn = document.getElementById('mnav-queue');
   const paymentsBtn = document.getElementById('mnav-payments');
   const reportsBtn = document.getElementById('mnav-reports');
@@ -1526,9 +1584,8 @@ function setupMobileNav() {
   if(submitBtn) submitBtn.style.display = isSubmitter ? 'flex' : 'none';
   if(preauthBtn) preauthBtn.style.display = isSubmitter ? 'flex' : 'none';
 
-  // Set active
-  const activePage = isApprover ? 'queue' : 'expenses';
   document.querySelectorAll('.mobile-nav-item').forEach(b=>b.classList.remove('active'));
+  const activePage = isApprover ? 'queue' : 'expenses';
   const activeBtn = document.getElementById('mnav-'+activePage);
   if(activeBtn) activeBtn.classList.add('active');
 }
