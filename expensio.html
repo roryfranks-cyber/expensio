@@ -169,7 +169,8 @@
     #mobile-topbar {
       display: flex !important;
       align-items: center; justify-content: space-between; gap: 10px;
-      padding: 14px 16px; background: var(--bg2);
+      padding: max(14px, env(safe-area-inset-top)) 16px 14px 16px;
+      background: var(--bg2);
       border-bottom: 1px solid var(--border);
       position: sticky; top: 0; z-index: 150;
       width: 100%; box-sizing: border-box; overflow: hidden;
@@ -177,6 +178,7 @@
     #mobile-topbar .mt-left { display: flex; align-items: center; gap: 10px; min-width: 0; overflow: hidden; flex: 1; }
     #mobile-topbar .mt-logo { font-size: 16px; font-weight: 700; color: var(--teal); }
     #mobile-topbar .mt-mode { font-size: 11px; color: var(--text3); }
+    #mobile-topbar button { min-height: 40px; min-width: 40px; }
 
     .stats-row { grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
     .stat-card { padding: 12px 10px; border-radius: 10px; }
@@ -1473,8 +1475,7 @@ function exportPDF() {
       </div>`;
   }).join('');
 
-  const printWindow = window.open('', '_blank');
-  printWindow.document.write(`
+  const reportHtml = `
     <!DOCTYPE html>
     <html><head><meta charset="utf-8"><title>Expensio Report</title>
     <style>
@@ -1484,9 +1485,11 @@ function exportPDF() {
       .summary{display:flex;gap:30px;background:#f0f7ff;border-radius:10px;padding:16px 20px;margin-bottom:24px}
       .summary-item b{display:block;font-size:22px;color:#111}
       .summary-item span{font-size:11px;color:#666;text-transform:uppercase;letter-spacing:0.5px}
-      @media print { body{margin:15px} }
+      .print-btn{display:inline-block;margin-bottom:20px;padding:10px 18px;background:#00C4E8;color:#04111F;border:none;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer}
+      @media print { body{margin:15px} .print-btn{display:none} }
     </style></head>
     <body>
+      <button class="print-btn" onclick="window.print()">🖨 Print / Save as PDF</button>
       <h1>Expensio — Expense Report</h1>
       <div class="meta">${member==='All'?'All team members':member} · ${status==='all'?'All statuses':status} · Generated ${today}</div>
       <div class="summary">
@@ -1495,9 +1498,18 @@ function exportPDF() {
       </div>
       ${rowsHtml}
     </body></html>
-  `);
-  printWindow.document.close();
-  setTimeout(()=>{ printWindow.print(); }, 500);
+  `;
+
+  // Popup windows opened via window.open() and filled in afterwards with
+  // document.write() are unreliable on mobile Safari/Chrome — they're
+  // frequently blocked outright, or the blank tab opens but never gets
+  // populated, leaving an empty page. Building the report as a real file
+  // (a Blob URL) and navigating to it directly avoids that async-popup
+  // pattern entirely and works the same way on desktop and mobile.
+  const blob = new Blob([reportHtml], {type:'text/html'});
+  const blobUrl = URL.createObjectURL(blob);
+  window.open(blobUrl, '_blank');
+  setTimeout(()=>URL.revokeObjectURL(blobUrl), 60000);
   showToast(`Generating PDF with ${filtered.length} expenses`);
 }
 
