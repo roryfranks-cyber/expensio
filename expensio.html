@@ -434,6 +434,9 @@ function normaliseExpense(e) {
 async function loadExpenses() {
   const res = await fetch(`${FB_BASE}/expenses?pageSize=500`);
   const json = await res.json();
+  if(!res.ok) {
+    throw new Error(`Failed to load expenses (${res.status}): ${(json && json.error && json.error.message) || 'unknown error'}`);
+  }
   if(!json.documents) return [];
   return json.documents.map(fromDoc).map(normaliseExpense).sort((a,b)=>new Date(b.submittedAt)-new Date(a.submittedAt));
 }
@@ -717,7 +720,8 @@ async function refreshAndRender() {
 async function refreshData() {
   loading = true;
   try {
-    expenses = await loadExpenses();
+    const fresh = await loadExpenses();
+    expenses = fresh; // only replace once the fetch has fully succeeded
     const now = new Date();
     for(const e of expenses) {
       if(e.status==='pending' && e.autoApproveAt && new Date(e.autoApproveAt)<=now) {
@@ -726,7 +730,10 @@ async function refreshData() {
         Object.assign(e, updated);
       }
     }
-  } catch(err) { console.error(err); }
+  } catch(err) {
+    console.error('refreshData failed, keeping previously loaded expenses:', err);
+    showToast('Could not refresh — showing last known data', '⚠️');
+  }
   loading = false;
 }
 
